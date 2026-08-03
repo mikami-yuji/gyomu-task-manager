@@ -25,8 +25,7 @@ export function RequestDetailModal({
     requestItem.category === 'sample_request' ? 'サンプル手配' : 'その他';
 
   const statusBadge =
-    requestItem.status === 'completed' ? { label: '完了', bg: 'bg-emerald-100 text-emerald-800 border-emerald-200' } :
-    requestItem.status === 'answered' ? { label: '回答済み', bg: 'bg-indigo-100 text-indigo-800 border-indigo-200' } :
+    requestItem.status === 'answered' || (requestItem.status as any) === 'completed' ? { label: '回答済み', bg: 'bg-emerald-100 text-emerald-800 border-emerald-200' } :
     requestItem.status === 'in_progress' ? { label: '確認中', bg: 'bg-sky-100 text-sky-800 border-sky-200' } :
     requestItem.status === 'on_hold' ? { label: '保留', bg: 'bg-slate-100 text-slate-800 border-slate-200' } :
     { label: '未着手', bg: 'bg-amber-100 text-amber-800 border-amber-200' };

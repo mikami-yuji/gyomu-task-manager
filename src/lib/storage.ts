@@ -195,7 +195,7 @@ export function updateRequest(id: string, input: UpdateRequestInput): BusinessRe
     orderNumber: input.orderNumber !== undefined ? input.orderNumber : current.orderNumber,
     desiredDeliveryDate: input.desiredDeliveryDate !== undefined ? input.desiredDeliveryDate : current.desiredDeliveryDate,
     details: input.details !== undefined ? input.details : current.details,
-    completedAt: input.status === 'completed' ? now : current.completedAt,
+    completedAt: input.status === 'answered' ? now : current.completedAt,
     updatedAt: now,
   };
 

@@ -102,13 +102,12 @@ export async function notifyNewRequestCreated(request: BusinessRequest): Promise
 export async function notifyRequestUpdated(request: BusinessRequest): Promise<void> {
   const settings = getAllNotificationSettings();
   const targetEmails = settings
-    .filter(s => (request.status === 'completed' ? s.notifyOnComplete : s.notifyOnAnswer) && s.email)
+    .filter(s => (request.status === 'answered' ? (s.notifyOnAnswer || s.notifyOnComplete) : s.notifyOnAnswer) && s.email)
     .map(s => s.email);
 
   if (targetEmails.length === 0) return;
 
-  const statusLabel = request.status === 'completed' ? '完了' :
-                      request.status === 'answered' ? '回答済み' :
+  const statusLabel = request.status === 'answered' ? '回答済み' :
                       request.status === 'in_progress' ? '確認中' : '更新';
 
   const subject = `【業務課依頼】[${statusLabel}] ${request.title} (${request.id})`;
