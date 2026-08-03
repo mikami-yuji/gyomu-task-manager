@@ -44,7 +44,7 @@ export default function NewRequestPage(): React.JSX.Element {
   const [desiredDeliveryDate, setDesiredDeliveryDate] = useState<string>('');
   const [details, setDetails] = useState<string>('');
 
-  // 工場名・工場コード・業務担当者（相互自動補完）
+  // 工場名・工場コード・業務担当者
   const [factoryName, setFactoryName] = useState<string>('');
   const [factoryCode, setFactoryCode] = useState<string>('');
   const [assigneeName, setAssigneeName] = useState<string>('');
@@ -54,7 +54,7 @@ export default function NewRequestPage(): React.JSX.Element {
   const [ccrMembers, setCcrMembers] = useState<string[]>([...CCR_PERSONS]);
   const [gyomuMembers, setGyomuMembers] = useState<string[]>([...GYOMU_PERSONS]);
   const [factoryList, setFactoryList] = useState<FactoryMasterItem[]>([...FACTORY_MASTERS]);
-  
+
   // 欠品商品明細リスト
   const [products, setProducts] = useState<ProductItem[]>([
     { id: '1', catalogNumber: '', weightKg: '', productName: '', quantity: '1', unit: '枚' },
@@ -99,7 +99,7 @@ export default function NewRequestPage(): React.JSX.Element {
       });
   }, []);
 
-  // ① 工場名選択・入力時の相互連動（工場コード・担当業務員を自動記載）
+  // ① 工場名選択時の連動（工場コード ＆ 担当者を記載）
   const handleFactoryNameChange = (name: string): void => {
     setFactoryName(name);
     const matched = factoryList.find(f => f.name === name);
@@ -113,7 +113,7 @@ export default function NewRequestPage(): React.JSX.Element {
     }
   };
 
-  // ② 工場コード選択・入力時の相互連動（工場名・担当業務員を自動記載）
+  // ② 工場コード入力・選択時の連動（工場名 ＆ 担当者を記載）
   const handleFactoryCodeChange = (code: string): void => {
     setFactoryCode(code);
     const matched = factoryList.find(f => f.code === code || f.code.toLowerCase() === code.toLowerCase());
@@ -125,17 +125,30 @@ export default function NewRequestPage(): React.JSX.Element {
     }
   };
 
-  // ③ 業務担当者選択時の相互連動（紐づいている工場があれば自動記載）
+  // ③ 業務担当者選択時のスマート連動（担当の工場リストから自動選択・選択肢絞り込み）
   const handleAssigneeNameChange = (person: string): void => {
     setAssigneeName(person);
     if (person) {
-      const matched = factoryList.find(f => f.defaultAssignee === person);
-      if (matched) {
-        setFactoryName(matched.name);
-        setFactoryCode(matched.code);
+      const assignedFactories = factoryList.filter(f => f.defaultAssignee === person);
+      if (assignedFactories.length === 1) {
+        // 担当工場が1つの場合はその工場とコードを即座にセット
+        setFactoryName(assignedFactories[0].name);
+        setFactoryCode(assignedFactories[0].code);
+      } else if (assignedFactories.length > 1) {
+        // 複数の担当工場がある場合、現在選択中の工場がその中に無ければ未選択にしてドロップダウンから選択させる
+        const currentIsAssigned = assignedFactories.some(f => f.name === factoryName);
+        if (!currentIsAssigned) {
+          setFactoryName('');
+          setFactoryCode('');
+        }
       }
     }
   };
+
+  // 選択された業務担当者が担当している工場リスト
+  const filteredFactories = assigneeName
+    ? factoryList.filter(f => f.defaultAssignee === assigneeName)
+    : [];
 
   const handleDeptChange = (dept: Department): void => {
     setRequesterDept(dept);
@@ -469,17 +482,37 @@ export default function NewRequestPage(): React.JSX.Element {
                 </div>
               </div>
 
-              {/* 工場名・工場コード・業務担当者（どれを入力しても全部が連動して自動記載） */}
+              {/* 工場名・工場コード・業務担当者（担当選択で工場ドロップダウンが絞り込み＆連動） */}
               <div className="p-4 bg-slate-100/80 border border-slate-200 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <Building className="w-4 h-4 text-indigo-600" />
-                    依頼先工場 ＆ 担当者指定 <span className="text-[10px] font-normal text-slate-500">（どれか1つ入力・選択で全部自動記載）</span>
+                    依頼先工場 ＆ 業務担当者設定 <span className="text-[10px] font-normal text-slate-500">（担当を選ぶと受持ち工場を優先表示）</span>
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  {/* 工場名ドロップダウン / 直接入力 */}
+                  {/* 業務担当者 */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1">
+                      <UserCheck className="w-3.5 h-3.5 text-sky-600" />
+                      業務担当者
+                    </label>
+                    <select
+                      value={assigneeName}
+                      onChange={e => handleAssigneeNameChange(e.target.value)}
+                      className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    >
+                      <option value="">-- 全担当者 --</option>
+                      {gyomuMembers.map(person => (
+                        <option key={person} value={person}>
+                          {person}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 製造工場名（担当者に絞り込まれたリスト ＋ 全工場リスト） */}
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">製造工場名</label>
                     <select
@@ -488,11 +521,25 @@ export default function NewRequestPage(): React.JSX.Element {
                       className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     >
                       <option value="">-- 工場を選択 --</option>
-                      {factoryList.map(f => (
-                        <option key={f.name} value={f.name}>
-                          {f.name} {f.defaultAssignee ? `(担当: ${f.defaultAssignee})` : ''}
-                        </option>
-                      ))}
+
+                      {/* 業務担当者が選ばれている場合、その担当の工場を上に表示 */}
+                      {filteredFactories.length > 0 && (
+                        <optgroup label={`【${assigneeName} 担当工場】`}>
+                          {filteredFactories.map(f => (
+                            <option key={`assigned-${f.name}`} value={f.name}>
+                              ★ {f.name} (CD: {f.code})
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+
+                      <optgroup label={assigneeName ? "【すべての工場】" : "【工場一覧】"}>
+                        {factoryList.map(f => (
+                          <option key={f.name} value={f.name}>
+                            {f.name} (CD: {f.code}) {f.defaultAssignee ? `[担当:${f.defaultAssignee}]` : ''}
+                          </option>
+                        ))}
+                      </optgroup>
                     </select>
                   </div>
 
@@ -506,26 +553,6 @@ export default function NewRequestPage(): React.JSX.Element {
                       placeholder="例: 221 / 554"
                       className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-mono font-bold text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
-                  </div>
-
-                  {/* 業務担当者 */}
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1">
-                      <UserCheck className="w-3.5 h-3.5 text-sky-600" />
-                      業務担当者
-                    </label>
-                    <select
-                      value={assigneeName}
-                      onChange={e => handleAssigneeNameChange(e.target.value)}
-                      className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    >
-                      <option value="">-- 業務担当を選択 --</option>
-                      {gyomuMembers.map(person => (
-                        <option key={person} value={person}>
-                          {person}
-                        </option>
-                      ))}
-                    </select>
                   </div>
                 </div>
               </div>

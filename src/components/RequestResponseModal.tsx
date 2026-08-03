@@ -153,17 +153,28 @@ export function RequestResponseModal({
     }
   };
 
-  // ③ 業務担当者変更時：該当工場があれば工場名・工場コードを自動記載
+  // ③ 業務担当者変更時：該当工場があれば工場名・工場コードを連動
   const handleAssigneeChange = (personName: string): void => {
     setAssigneeName(personName);
     if (personName) {
-      const matched = factoryList.find(f => f.defaultAssignee === personName);
-      if (matched) {
-        setSelectedFactoryName(matched.name);
-        setFactoryCode(matched.code);
+      const assignedFactories = factoryList.filter(f => f.defaultAssignee === personName);
+      if (assignedFactories.length === 1) {
+        setSelectedFactoryName(assignedFactories[0].name);
+        setFactoryCode(assignedFactories[0].code);
+      } else if (assignedFactories.length > 1) {
+        const currentIsAssigned = assignedFactories.some(f => f.name === selectedFactoryName);
+        if (!currentIsAssigned) {
+          setSelectedFactoryName('');
+          setFactoryCode('');
+        }
       }
     }
   };
+
+  // 選択された業務担当者の受持ち工場
+  const filteredFactories = assigneeName
+    ? factoryList.filter(f => f.defaultAssignee === assigneeName)
+    : [];
 
   // 依頼の納品区分（ロール / 単袋）
   const requestedPackageType = requestItem.estimateDetails?.packageType || '単袋';
@@ -356,41 +367,11 @@ export function RequestResponseModal({
             <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
               <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <Building className="w-4 h-4 text-indigo-600" />
-                工場 ＆ 業務担当者連携 <span className="text-[10px] font-normal text-slate-500">（どれか入力で全記載）</span>
+                工場 ＆ 業務担当者連携
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-              {/* 製造工場名 */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">製造工場名</label>
-                <select
-                  value={selectedFactoryName}
-                  onChange={e => handleFactorySelect(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">-- 工場を選択 --</option>
-                  {factoryList.map(f => (
-                    <option key={f.name} value={f.name}>
-                      {f.name} {f.defaultAssignee ? `(担当: ${f.defaultAssignee})` : ''}
-                    </option>
-                  ))}
-                  <option value="その他">その他</option>
-                </select>
-              </div>
-
-              {/* 工場コード */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">工場コード</label>
-                <input
-                  type="text"
-                  value={factoryCode}
-                  onChange={e => handleFactoryCodeChange(e.target.value)}
-                  placeholder="例: 221 / 554"
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
               {/* 業務担当者 */}
               <div>
                 <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1">
@@ -408,6 +389,47 @@ export function RequestResponseModal({
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* 製造工場名（担当者に絞り込まれたリスト ＋ 全工場リスト） */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">製造工場名</label>
+                <select
+                  value={selectedFactoryName}
+                  onChange={e => handleFactorySelect(e.target.value)}
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">-- 工場を選択 --</option>
+                  {filteredFactories.length > 0 && (
+                    <optgroup label={`【${assigneeName} 担当工場】`}>
+                      {filteredFactories.map(f => (
+                        <option key={`assigned-${f.name}`} value={f.name}>
+                          ★ {f.name} (CD: {f.code})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label={assigneeName ? "【すべての工場】" : "【工場一覧】"}>
+                    {factoryList.map(f => (
+                      <option key={f.name} value={f.name}>
+                        {f.name} (CD: {f.code})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <option value="その他">その他</option>
+                </select>
+              </div>
+
+              {/* 工場コード */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">工場コード</label>
+                <input
+                  type="text"
+                  value={factoryCode}
+                  onChange={e => handleFactoryCodeChange(e.target.value)}
+                  placeholder="例: 221 / 554"
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
               </div>
             </div>
           </div>
