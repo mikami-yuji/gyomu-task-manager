@@ -131,10 +131,11 @@ export type NotificationSetting = {
   notifyOnComplete: boolean;
 };
 
-/** 工場マスター項目 */
+/** 工場マスター項目（工場別に担当業務員を割り当て可能） */
 export type FactoryMasterItem = {
   name: string;
   code: string;
+  defaultAssignee?: string; // 工場別の担当業務員名
 };
 
 /** マスターリスト（営業・CCR・業務課・工場・個人別メール） */

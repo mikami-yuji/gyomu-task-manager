@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, Plus, Trash2, CheckCircle2, UserPlus, Users, Settings, Building, AtSign } from 'lucide-react';
+import { X, Save, Plus, Trash2, CheckCircle2, UserPlus, Users, Settings, Building, AtSign, UserCheck } from 'lucide-react';
 import { MemberMaster, FactoryMasterItem } from '@/types/request';
 import { GYOMU_PERSONS, FACTORY_MASTERS } from '@/lib/constants';
 
@@ -25,6 +25,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
   const [newMemberEmail, setNewMemberEmail] = useState<string>('');
   const [newFactoryName, setNewFactoryName] = useState<string>('');
   const [newFactoryCode, setNewFactoryCode] = useState<string>('');
+  const [newFactoryAssignee, setNewFactoryAssignee] = useState<string>('');
   
   const [loading, setLoading] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
@@ -127,6 +128,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
     const item: FactoryMasterItem = {
       name: newFactoryName.trim(),
       code: newFactoryCode.trim() || '未設定',
+      defaultAssignee: newFactoryAssignee || undefined,
     };
     const currentFactories = masters.factories || [];
     setMasters({
@@ -135,6 +137,20 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
     });
     setNewFactoryName('');
     setNewFactoryCode('');
+    setNewFactoryAssignee('');
+  };
+
+  // 工場担当者変更
+  const handleFactoryAssigneeChange = (index: number, assigneeName: string): void => {
+    const currentFactories = [...(masters.factories || [])];
+    currentFactories[index] = {
+      ...currentFactories[index],
+      defaultAssignee: assigneeName || undefined,
+    };
+    setMasters({
+      ...masters,
+      factories: currentFactories,
+    });
   };
 
   // 工場削除
@@ -204,7 +220,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
           </button>
         </div>
 
-        {/* タブ切替ナビゲーション（担当者マスター ＆ 工場マスターの2つのみ） */}
+        {/* タブ切替ナビゲーション */}
         <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-3 space-x-1">
           <button
             onClick={() => setActiveTab('masters')}
@@ -226,7 +242,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
             }`}
           >
             <Building className="w-4 h-4" />
-            工場マスター
+            工場マスター ＆ 担当者割り当て
           </button>
         </div>
 
@@ -356,16 +372,16 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
             </div>
           )}
 
-          {/* 2. 工場マスター管理 */}
+          {/* 2. 工場マスター ＆ 業務担当者割り当て */}
           {activeTab === 'factories' && (
             <div className="space-y-4">
               <p className="text-xs text-slate-600 font-medium">
-                見積回答で選択する「製造工場名」および「工場コード」を追加・削除できます。
+                各製造工場の名称・コードおよび、**担当の業務課メンバー**を割り当てて保存できます。
               </p>
 
               {/* 工場追加フォーム */}
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                <div className="sm:col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="sm:col-span-4">
                   <input
                     type="text"
                     value={newFactoryName}
@@ -374,7 +390,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 font-semibold"
                   />
                 </div>
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-3">
                   <input
                     type="text"
                     value={newFactoryCode}
@@ -383,7 +399,21 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono font-bold"
                   />
                 </div>
-                <div className="sm:col-span-1">
+                <div className="sm:col-span-3">
+                  <select
+                    value={newFactoryAssignee}
+                    onChange={e => setNewFactoryAssignee(e.target.value)}
+                    className="w-full px-2 py-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-700"
+                  >
+                    <option value="">-- 担当業務員 --</option>
+                    {masters.gyomu.map(person => (
+                      <option key={person} value={person}>
+                        {person}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
                   <button
                     type="button"
                     onClick={handleAddFactory}
@@ -395,30 +425,50 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
                 </div>
               </div>
 
-              {/* 工場リスト */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* 工場 ＆ 担当業務員設定リスト */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {factoryList.map((factory, idx) => (
                   <div
                     key={`${factory.name}-${idx}`}
-                    className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 shadow-sm"
+                    className="p-3 bg-white border border-slate-200 rounded-xl text-xs shadow-sm space-y-2"
                   >
-                    <div className="flex items-center space-x-2">
-                      <Building className="w-4 h-4 text-indigo-600 shrink-0" />
-                      <div>
-                        <span className="font-bold text-slate-900">{factory.name}</span>
-                        <span className="text-slate-500 font-mono text-[11px] block">
-                          CD: {factory.code}
-                        </span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Building className="w-4 h-4 text-indigo-600 shrink-0" />
+                        <div>
+                          <span className="font-bold text-slate-900 text-sm">{factory.name}</span>
+                          <span className="text-slate-500 font-mono text-[11px] block">
+                            CD: {factory.code}
+                          </span>
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFactory(idx)}
+                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                        title="削除"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFactory(idx)}
-                      className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
-                      title="削除"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+
+                    {/* 工場別の担当業務員選択ドロップダウン */}
+                    <div className="flex items-center space-x-1.5 pt-1 border-t border-slate-100">
+                      <UserCheck className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                      <span className="text-slate-500 text-[11px] shrink-0 font-bold">担当業務員:</span>
+                      <select
+                        value={factory.defaultAssignee || ''}
+                        onChange={e => handleFactoryAssigneeChange(idx, e.target.value)}
+                        className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      >
+                        <option value="">未割当 (指定なし)</option>
+                        {masters.gyomu.map(person => (
+                          <option key={person} value={person}>
+                            {person}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -431,7 +481,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
                   className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition-all flex items-center gap-1.5"
                 >
                   <Save className="w-4 h-4" />
-                  工場マスターを保存
+                  工場マスター ＆ 担当者設定を保存
                 </button>
               </div>
             </div>

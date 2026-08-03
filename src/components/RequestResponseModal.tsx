@@ -122,12 +122,15 @@ export function RequestResponseModal({
     }
   };
 
-  // 工場選択変更ハンドラー
+  // 工場選択変更ハンドラー（工場担当業務員がセットされていれば自動割り当て）
   const handleFactorySelect = (factoryName: string): void => {
     setSelectedFactoryName(factoryName);
     const matched = factoryList.find(f => f.name === factoryName);
     if (matched) {
       setFactoryCode(matched.code);
+      if (matched.defaultAssignee) {
+        setAssigneeName(matched.defaultAssignee);
+      }
     } else if (factoryName === '') {
       setFactoryCode('');
     }
@@ -283,7 +286,7 @@ export function RequestResponseModal({
             </div>
           )}
 
-          {/* ステータス選択（完了を廃止・回答済みをグリーン化） */}
+          {/* ステータス選択 */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
               ステータス <span className="text-rose-500">*</span>
@@ -607,7 +610,7 @@ export function RequestResponseModal({
                     <option value="">-- 工場を選択してください --</option>
                     {factoryList.map(f => (
                       <option key={f.name} value={f.name}>
-                        {f.name}
+                        {f.name} {f.defaultAssignee ? `(担当: ${f.defaultAssignee})` : ''}
                       </option>
                     ))}
                     <option value="その他">その他 (直接コード入力)</option>
