@@ -19,7 +19,6 @@ import {
   ArrowUpDown,
   CheckSquare,
   Send,
-  AlertTriangle,
   AlertCircle,
   MessageSquare,
   CheckCircle2,
@@ -35,6 +34,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
 
   // フィルター・絞り込み状態
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
+  const [selectedRequester, setSelectedRequester] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -86,7 +86,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
       .catch(err => console.error('マスター取得エラー:', err));
   }, []);
 
-  // 担当者一覧の抽出 (gyomuMembers + 実際の依頼データの担当者)
+  // 業務担当者一覧
   const assigneeList = useMemo(() => {
     const set = new Set<string>(gyomuMembers);
     requests.forEach(r => {
@@ -94,6 +94,15 @@ export default function AdminDashboardPage(): React.JSX.Element {
     });
     return Array.from(set);
   }, [requests, gyomuMembers]);
+
+  // 発信者一覧
+  const requesterList = useMemo(() => {
+    const set = new Set<string>();
+    requests.forEach(r => {
+      if (r.requesterName) set.add(r.requesterName);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'ja'));
+  }, [requests]);
 
   // 選択中の担当者で絞り込んだ依頼リスト（カテゴリの件数集計用）
   const assigneeFilteredRequests = useMemo(() => {
@@ -107,6 +116,9 @@ export default function AdminDashboardPage(): React.JSX.Element {
       .filter(item => {
         // 担当者フィルター
         if (selectedAssignee !== 'all' && item.assigneeName !== selectedAssignee) return false;
+
+        // 発信者フィルター
+        if (selectedRequester !== 'all' && item.requesterName !== selectedRequester) return false;
 
         // カテゴリ・ステータス
         if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
@@ -135,7 +147,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
         if (sortOrder === 'asc') return a.id.localeCompare(b.id);
         return b.id.localeCompare(a.id);
       });
-  }, [requests, selectedAssignee, selectedStatus, selectedCategory, searchQuery, startDate, endDate, sortOrder]);
+  }, [requests, selectedAssignee, selectedRequester, selectedStatus, selectedCategory, searchQuery, startDate, endDate, sortOrder]);
 
   // 希望納期の期限判定スタイル計算関数
   const getDeliveryDateStyle = (desiredDate: string, status: string) => {
@@ -320,7 +332,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
           </div>
         </div>
 
-        {/* 統計カウンター（回答済みをグリーン化＆完了を撤去） */}
+        {/* 統計カウンター */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
             <div>
@@ -430,7 +442,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
             </div>
           </div>
 
-          {/* ③ 検索・日付フィルター・ソート */}
+          {/* ③ 検索・日付フィルター・発信者ドロップダウン・ソート */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -462,8 +474,23 @@ export default function AdminDashboardPage(): React.JSX.Element {
               />
             </div>
 
-            <div className="flex items-center space-x-2 justify-end">
+            <div className="flex items-center space-x-2 justify-end flex-wrap gap-y-2">
               <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+
+              {/* 発信者選択ドロップダウン */}
+              <select
+                value={selectedRequester}
+                onChange={e => setSelectedRequester(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              >
+                <option value="all">全発信者</option>
+                {requesterList.map(name => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+
               <select
                 value={selectedStatus}
                 onChange={e => setSelectedStatus(e.target.value)}
@@ -660,12 +687,9 @@ export default function AdminDashboardPage(): React.JSX.Element {
                         {req.customerCode || '-'}
                       </td>
 
-                      {/* 希望納期（色付け・アラートハイライト表示） */}
+                      {/* 希望納期 */}
                       <td className="p-3 whitespace-nowrap">
                         <span className={deliveryStyle.style}>
-                          {(deliveryStyle.isOverdue || deliveryStyle.isImminent) && (
-                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                          )}
                           {deliveryStyle.label || req.desiredDeliveryDate}
                         </span>
                       </td>

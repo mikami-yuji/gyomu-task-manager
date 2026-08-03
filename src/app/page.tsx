@@ -32,6 +32,7 @@ export default function DashboardPage(): React.JSX.Element {
   // フィルター・検索状態
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedRequester, setSelectedRequester] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortKey] = useState<'id' | 'desiredDeliveryDate' | 'createdAt'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -66,12 +67,22 @@ export default function DashboardPage(): React.JSX.Element {
     fetchRequests();
   }, []);
 
+  // 発信者一覧の抽出 (ユニークリスト)
+  const requesterList = useMemo(() => {
+    const set = new Set<string>();
+    requests.forEach(r => {
+      if (r.requesterName) set.add(r.requesterName);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'ja'));
+  }, [requests]);
+
   // フィルタリングおよびソート適用
   const filteredRequests = useMemo(() => {
     return requests
       .filter(item => {
         if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
         if (selectedStatus !== 'all' && item.status !== selectedStatus) return false;
+        if (selectedRequester !== 'all' && item.requesterName !== selectedRequester) return false;
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
           const matchId = item.id.toLowerCase().includes(q);
@@ -92,7 +103,7 @@ export default function DashboardPage(): React.JSX.Element {
         if (sortOrder === 'asc') return valA.localeCompare(valB);
         return valB.localeCompare(valA);
       });
-  }, [requests, selectedCategory, selectedStatus, searchQuery, sortKey, sortOrder]);
+  }, [requests, selectedCategory, selectedStatus, selectedRequester, searchQuery, sortKey, sortOrder]);
 
   // 希望納期の期限判定スタイル計算関数
   const getDeliveryDateStyle = (desiredDate: string, status: string) => {
@@ -141,7 +152,7 @@ export default function DashboardPage(): React.JSX.Element {
       <Header />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* 上部サマリーカード（完了を統合し回答済みをグリーン化） */}
+        {/* 上部サマリーカード */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
             <div>
@@ -256,8 +267,24 @@ export default function DashboardPage(): React.JSX.Element {
               />
             </div>
 
-            <div className="flex items-center space-x-2 w-full sm:w-auto">
+            <div className="flex items-center space-x-2 flex-wrap gap-y-2 w-full sm:w-auto justify-end">
               <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+
+              {/* 発信者選択ドロップダウン */}
+              <select
+                value={selectedRequester}
+                onChange={e => setSelectedRequester(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              >
+                <option value="all">全発信者</option>
+                {requesterList.map(name => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+
+              {/* ステータス選択ドロップダウン */}
               <select
                 value={selectedStatus}
                 onChange={e => setSelectedStatus(e.target.value)}
