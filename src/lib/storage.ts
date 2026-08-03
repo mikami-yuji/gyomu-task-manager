@@ -75,14 +75,28 @@ export function saveRequests(requests: BusinessRequest[]): void {
   }
 }
 
+/**
+ * 新規依頼作成（管理番号ルール: YYYY/MM/DD-001）
+ */
 export function createRequest(input: CreateRequestInput): BusinessRequest {
   const requests = getAllRequests();
   
-  const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const todayCount = requests.filter(r => r.id.includes(todayStr)).length + 1;
-  const newId = `GYM-${todayStr}-${String(todayCount).padStart(3, '0')}`;
+  const nowObj = new Date();
+  const year = nowObj.getFullYear();
+  const month = String(nowObj.getMonth() + 1).padStart(2, '0');
+  const day = String(nowObj.getDate()).padStart(2, '0');
+  
+  // 管理番号プレフィックス: YYYY/MM/DD
+  const datePrefix = `${year}/${month}/${day}`;
+  const legacyPrefix = `${year}${month}${day}`;
 
-  const now = new Date().toISOString();
+  // 本日作成された依頼の数をカウント（新形式 YYYY/MM/DD および旧形式 YYYYMMDD の両方に対応）
+  const todayCount = requests.filter(r => r.id.includes(datePrefix) || r.id.includes(legacyPrefix)).length + 1;
+  
+  // 新管理番号フォーマット: YYYY/MM/DD-001
+  const newId = `${datePrefix}-${String(todayCount).padStart(3, '0')}`;
+
+  const now = nowObj.toISOString();
 
   // 工場名・コードがあれば見積回答初期値にもセット
   const initialEstimateResponse = (input.factoryName || input.factoryCode) ? {

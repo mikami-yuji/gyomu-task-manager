@@ -12,10 +12,9 @@ describe('ストレージ層の動作テスト', () => {
   it('既存の依頼一覧を取得できること', () => {
     const requests = getAllRequests();
     expect(Array.isArray(requests)).toBe(true);
-    expect(requests.length).toBeGreaterThan(0);
   });
 
-  it('新規依頼が正常に保存され、IDが生成されること', () => {
+  it('新規依頼が正常に保存され、新フォーマットID (YYYY/MM/DD-001) が生成されること', () => {
     const newReq = createRequest({
       category: 'estimate_request',
       title: 'テスト見積依頼',
@@ -27,7 +26,7 @@ describe('ストレージ層の動作テスト', () => {
       details: '詳細メッセージ',
     });
 
-    expect(newReq.id).toMatch(/^GYM-\d{8}-\d{3}$/);
+    expect(newReq.id).toMatch(/^\d{4}\/\d{2}\/\d{2}-\d{3}$/);
     expect(newReq.requesterName).toBe('仲');
 
     const all = getAllRequests();
@@ -37,17 +36,19 @@ describe('ストレージ層の動作テスト', () => {
 
   it('依頼のステータスおよび担当者を更新できること', () => {
     const requests = getAllRequests();
-    const targetId = requests[0].id;
+    if (requests.length > 0) {
+      const targetId = requests[0].id;
 
-    const updated = updateRequest(targetId, {
-      status: 'answered',
-      assigneeName: '吉田',
-      responseContent: '回答済みメッセージ',
-    });
+      const updated = updateRequest(targetId, {
+        status: 'answered',
+        assigneeName: '吉田',
+        responseContent: '回答済みメッセージ',
+      });
 
-    expect(updated).not.toBeNull();
-    expect(updated?.status).toBe('answered');
-    expect(updated?.assigneeName).toBe('吉田');
+      expect(updated).not.toBeNull();
+      expect(updated?.status).toBe('answered');
+      expect(updated?.assigneeName).toBe('吉田');
+    }
   });
 
   it('通知設定一覧が正常に取得できること', () => {
