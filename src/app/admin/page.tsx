@@ -20,9 +20,12 @@ import {
   CheckSquare,
   Send,
   AlertTriangle,
+  AlertCircle,
+  MessageSquare,
+  CheckCircle2,
 } from 'lucide-react';
 import { BusinessRequest, RequestStatus } from '@/types/request';
-import { GYOMU_PERSONS } from '@/lib/constants';
+import { GYOMU_PERSONS, STATUS_CONFIG } from '@/lib/constants';
 
 export default function AdminDashboardPage(): React.JSX.Element {
   const [requests, setRequests] = useState<BusinessRequest[]>([]);
@@ -136,7 +139,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
 
   // 希望納期の期限判定スタイル計算関数
   const getDeliveryDateStyle = (desiredDate: string, status: string) => {
-    if (status === 'completed') {
+    if (status === 'completed' || status === 'answered') {
       return { style: 'text-slate-600 font-medium', isOverdue: false, isImminent: false };
     }
     if (!desiredDate) {
@@ -261,7 +264,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
       `"${(r.estimateResponse?.factoryName || '').replace(/"/g, '""')}"`,
       r.customerCode || '',
       r.desiredDeliveryDate,
-      r.status,
+      STATUS_CONFIG[r.status]?.label || (r.status as string) === 'completed' ? '回答済み' : r.status,
       r.assigneeName || '',
       r.scheduledPurchaseDate || '',
       r.incomingQuantity || '',
@@ -317,32 +320,52 @@ export default function AdminDashboardPage(): React.JSX.Element {
           </div>
         </div>
 
-        {/* 統計カウンター */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <p className="text-xs text-slate-500 font-bold">全件</p>
-            <p className="text-xl font-black text-slate-800">{requests.length}</p>
+        {/* 統計カウンター（回答済みをグリーン化＆完了を撤去） */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-slate-500 font-bold">全件</p>
+              <p className="text-2xl font-black text-slate-800">{requests.length}</p>
+            </div>
+            <div className="p-2.5 bg-slate-100 text-slate-600 rounded-xl">
+              <Clock className="w-5 h-5" />
+            </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-amber-200 shadow-sm">
-            <p className="text-xs text-amber-700 font-bold">未着手・対応待ち</p>
-            <p className="text-xl font-black text-amber-700">
-              {requests.filter(r => r.status === 'pending').length}
-            </p>
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-amber-200 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-amber-800 font-bold">未着手・対応待ち</p>
+              <p className="text-2xl font-black text-amber-700">
+                {requests.filter(r => r.status === 'pending').length}
+              </p>
+            </div>
+            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
+              <AlertCircle className="w-5 h-5" />
+            </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-sky-200 shadow-sm">
-            <p className="text-xs text-sky-700 font-bold">確認中・回答中</p>
-            <p className="text-xl font-black text-sky-700">
-              {requests.filter(r => r.status === 'in_progress').length}
-            </p>
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-sky-200 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-sky-800 font-bold">確認中・対応中</p>
+              <p className="text-2xl font-black text-sky-700">
+                {requests.filter(r => r.status === 'in_progress').length}
+              </p>
+            </div>
+            <div className="p-2.5 bg-sky-50 text-sky-600 rounded-xl">
+              <MessageSquare className="w-5 h-5" />
+            </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-sm">
-            <p className="text-xs text-emerald-700 font-bold">回答済み・完了</p>
-            <p className="text-xl font-black text-emerald-700">
-              {requests.filter(r => r.status === 'answered' || r.status === 'completed').length}
-            </p>
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-emerald-200 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-emerald-800 font-bold">回答済み</p>
+              <p className="text-2xl font-black text-emerald-700">
+                {requests.filter(r => r.status === 'answered' || (r.status as any) === 'completed').length}
+              </p>
+            </div>
+            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
           </div>
         </div>
 
@@ -450,7 +473,6 @@ export default function AdminDashboardPage(): React.JSX.Element {
                 <option value="pending">未着手</option>
                 <option value="in_progress">確認中</option>
                 <option value="answered">回答済み</option>
-                <option value="completed">完了</option>
                 <option value="on_hold">保留</option>
               </select>
 
@@ -506,7 +528,6 @@ export default function AdminDashboardPage(): React.JSX.Element {
                 >
                   <option value="in_progress">確認中</option>
                   <option value="answered">回答済み</option>
-                  <option value="completed">完了</option>
                   <option value="on_hold">保留</option>
                 </select>
                 <button
@@ -563,13 +584,8 @@ export default function AdminDashboardPage(): React.JSX.Element {
               <tbody className="divide-y divide-slate-100">
                 {filteredRequests.map(req => {
                   const isSelected = selectedIds.includes(req.id);
-                  const statusBadge =
-                    req.status === 'completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
-                    req.status === 'answered' ? 'bg-indigo-100 text-indigo-800 border-indigo-300' :
-                    req.status === 'in_progress' ? 'bg-sky-100 text-sky-800 border-sky-300' :
-                    req.status === 'on_hold' ? 'bg-slate-100 text-slate-800 border-slate-300' :
-                    'bg-amber-100 text-amber-800 border-amber-300';
-
+                  const stKey = (req.status as string) === 'completed' ? 'answered' : req.status;
+                  const stConf = STATUS_CONFIG[stKey] || STATUS_CONFIG.pending;
                   const deliveryStyle = getDeliveryDateStyle(req.desiredDeliveryDate, req.status);
 
                   return (
@@ -656,11 +672,8 @@ export default function AdminDashboardPage(): React.JSX.Element {
 
                       {/* ステータス */}
                       <td className="p-3 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] border ${statusBadge}`}>
-                          {req.status === 'completed' ? '完了' :
-                           req.status === 'answered' ? '回答済み' :
-                           req.status === 'in_progress' ? '確認中' :
-                           req.status === 'on_hold' ? '保留' : '未着手'}
+                        <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] border ${stConf.badgeStyle}`}>
+                          {stConf.label}
                         </span>
                       </td>
 

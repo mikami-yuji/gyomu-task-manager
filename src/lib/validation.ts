@@ -72,7 +72,7 @@ const createRequestSchema = z.object({
 });
 
 const updateRequestSchema = z.object({
-  status: z.enum(['pending', 'in_progress', 'answered', 'completed', 'on_hold']).optional(),
+  status: z.enum(['pending', 'in_progress', 'answered', 'on_hold']).optional(),
   assigneeName: z.string().max(50).optional(),
   scheduledPurchaseDate: z.string().optional(),
   incomingQuantity: z.string().optional(),

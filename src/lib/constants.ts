@@ -110,3 +110,37 @@ export const FACTORY_MASTERS: FactoryMasterItem[] = [
   { name: 'NissiNSeaL', code: '283' },
   { name: '丸新グラビア', code: '276' },
 ];
+
+/**
+ * ステータス設定統一（回答済みをグリーン/emeraldにし、完了を撤去）
+ */
+export const STATUS_CONFIG = {
+  pending: {
+    label: '未着手',
+    badgeStyle: 'bg-amber-100 text-amber-800 border-amber-300',
+    cardBorder: 'border-amber-200',
+    cardText: 'text-amber-700',
+    cardBg: 'bg-amber-50 text-amber-600',
+  },
+  in_progress: {
+    label: '確認中',
+    badgeStyle: 'bg-sky-100 text-sky-800 border-sky-300',
+    cardBorder: 'border-sky-200',
+    cardText: 'text-sky-700',
+    cardBg: 'bg-sky-50 text-sky-600',
+  },
+  answered: {
+    label: '回答済み',
+    badgeStyle: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    cardBorder: 'border-emerald-200',
+    cardText: 'text-emerald-700',
+    cardBg: 'bg-emerald-50 text-emerald-600',
+  },
+  on_hold: {
+    label: '保留',
+    badgeStyle: 'bg-slate-100 text-slate-800 border-slate-300',
+    cardBorder: 'border-slate-200',
+    cardText: 'text-slate-700',
+    cardBg: 'bg-slate-50 text-slate-600',
+  },
+} as const;

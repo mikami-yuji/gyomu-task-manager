@@ -3,8 +3,8 @@
 /** 依頼カテゴリ */
 export type RequestCategory = 'delivery_check' | 'estimate_request' | 'sample_request' | 'other';
 
-/** 依頼ステータス */
-export type RequestStatus = 'pending' | 'in_progress' | 'answered' | 'completed' | 'on_hold';
+/** 依頼ステータス (完了を廃止し「回答済み」に一本化) */
+export type RequestStatus = 'pending' | 'in_progress' | 'answered' | 'on_hold';
 
 /** 部署 (営業 / CCR のみ) */
 export type Department = 'sales' | 'ccr';

@@ -19,7 +19,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { BusinessRequest, RequestStatus, EstimateResponse, EstimateLotItem, FactoryMasterItem } from '@/types/request';
-import { GYOMU_PERSONS, FACTORY_MASTERS } from '@/lib/constants';
+import { GYOMU_PERSONS, FACTORY_MASTERS, STATUS_CONFIG } from '@/lib/constants';
 
 type RequestResponseModalProps = {
   requestItem: BusinessRequest | null;
@@ -76,7 +76,8 @@ export function RequestResponseModal({
 
   useEffect(() => {
     if (requestItem) {
-      setStatus(requestItem.status || 'in_progress');
+      const st = requestItem.status === ('completed' as any) ? 'answered' : (requestItem.status || 'in_progress');
+      setStatus(st);
       setAssigneeName(requestItem.assigneeName || gyomuMembers[0] || GYOMU_PERSONS[0]);
       setScheduledPurchaseDate(requestItem.scheduledPurchaseDate || '');
       setIncomingQuantity(requestItem.incomingQuantity || '');
@@ -93,7 +94,7 @@ export function RequestResponseModal({
         if (er.lots && er.lots.length > 0) {
           setLots(er.lots);
         } else {
-          // 旧データ互換（未回答時はロット1のみ）
+          // 旧データ互換
           const defaultLotName = requestItem.estimateDetails?.quantity || '';
           setLots([
             { id: '1', lotName: er.price4000Bag ? '4000' : defaultLotName, priceBag: er.price4000Bag || '', priceRoll: er.price4000Roll || '', deliveryDate: '' },
@@ -104,7 +105,6 @@ export function RequestResponseModal({
         setColorPlateCost('');
         setSelectedFactoryName('');
         setFactoryCode('');
-        // 初期状態はロット1のみ
         const defaultLotName = requestItem.estimateDetails?.quantity || '';
         setLots([
           { id: '1', lotName: defaultLotName, priceBag: '', priceRoll: '', deliveryDate: '' },
@@ -283,18 +283,17 @@ export function RequestResponseModal({
             </div>
           )}
 
-          {/* ステータス選択 */}
+          {/* ステータス選択（完了を廃止・回答済みをグリーン化） */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
               ステータス <span className="text-rose-500">*</span>
             </label>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { key: 'pending', label: '未着手', bg: 'bg-amber-100 text-amber-800 border-amber-300' },
-                { key: 'in_progress', label: '確認中', bg: 'bg-sky-100 text-sky-800 border-sky-300' },
-                { key: 'answered', label: '回答済み', bg: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
-                { key: 'completed', label: '完了', bg: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-                { key: 'on_hold', label: '保留', bg: 'bg-slate-100 text-slate-800 border-slate-300' },
+                { key: 'pending', label: '未着手', bg: STATUS_CONFIG.pending.badgeStyle },
+                { key: 'in_progress', label: '確認中', bg: STATUS_CONFIG.in_progress.badgeStyle },
+                { key: 'answered', label: '回答済み', bg: STATUS_CONFIG.answered.badgeStyle },
+                { key: 'on_hold', label: '保留', bg: STATUS_CONFIG.on_hold.badgeStyle },
               ].map(st => (
                 <button
                   key={st.key}
