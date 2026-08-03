@@ -1,3 +1,5 @@
+import { FactoryMasterItem } from '@/types/request';
+
 /**
  * 営業担当者マスターリスト
  */
@@ -78,14 +80,6 @@ export const PACKAGE_FORM_OPTIONS = [
   '【ＳＳ】四角 Rｶｯﾄ なし ｻｲﾄﾞ5MM',
   'その他 (直接入力)',
 ] as const;
-
-/**
- * 工場マスター（工場名 ＆ 工場コード）
- */
-export type FactoryMasterItem = {
-  name: string;
-  code: string;
-};
 
 export const FACTORY_MASTERS: FactoryMasterItem[] = [
   { name: 'Sugano', code: '221' },

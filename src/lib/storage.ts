@@ -8,75 +8,8 @@ const FILE_PATH = path.join(DATA_DIR, 'requests.json');
 const NOTIF_FILE_PATH = path.join(DATA_DIR, 'notifications.json');
 const MASTER_FILE_PATH = path.join(DATA_DIR, 'masters.json');
 
-// 初期サンプルデータ
-const INITIAL_REQUESTS: BusinessRequest[] = [
-  {
-    id: 'GYM-20260803-001',
-    category: 'delivery_check',
-    title: '【欠品納期問合せ】風そよぐ稲 TS 5kg',
-    requesterName: '見上',
-    requesterDept: 'sales',
-    customerName: '丸三',
-    customerCode: '53016',
-    desiredDeliveryDate: '2026-08-10',
-    details: 'カタログ№887 5kg 600枚の欠品納期問合せです。',
-    products: [
-      {
-        id: 'p-1',
-        catalogNumber: '887',
-        weightKg: '5',
-        productName: '風そよぐ稲 TS',
-        quantity: '600',
-        unit: '枚',
-      },
-    ],
-    attachments: [],
-    status: 'in_progress',
-    assigneeName: '吉田',
-    scheduledPurchaseDate: '2026-08-08',
-    incomingQuantity: '600枚',
-    responseContent: '仕入先に確認中。8月8日入荷予定です。',
-    createdAt: '2026-08-03T09:00:00.000Z',
-    updatedAt: '2026-08-03T09:30:00.000Z',
-  },
-  {
-    id: 'GYM-20260803-002',
-    category: 'estimate_request',
-    title: '【見積依頼】500g アルミチャック袋 2000m/4000m',
-    requesterName: '増田',
-    requesterDept: 'ccr',
-    customerName: 'スズリョーベルックス',
-    customerCode: '74418',
-    desiredDeliveryDate: '2026-08-08',
-    details: '添付の仕様で2,000mロットおよび4,000mロットの見積もりをお願いします。',
-    estimateDetails: {
-      capacity: '500g',
-      quantity: '2000 / 4000',
-      packageSize: '140mm × 220mm',
-      packageForm: '単袋・三方シール・アルミチャック',
-      structure: 'PET12 / AL7 / LLDPE60',
-      material: 'アルミチャック袋',
-      colorCount: '5色 グラビア印刷',
-      deoxidizer: '無',
-    },
-    estimateResponse: {
-      gravurePlateCost: '180,000円',
-      colorPlateCost: '220,000円',
-      price4000Bag: '28.5円/枚',
-      price4000Roll: '14.2円/m',
-      price2000Bag: '34.0円/枚',
-      price2000Roll: '17.0円/m',
-      factoryName: 'Sugano',
-      factoryCode: '221',
-    },
-    attachments: [],
-    status: 'answered',
-    assigneeName: '十川',
-    responseContent: '版代およびロット別単価の見積もりを算出いたしました。ご確認ください。',
-    createdAt: '2026-08-03T10:00:00.000Z',
-    updatedAt: '2026-08-03T11:15:00.000Z',
-  },
-];
+// 初期サンプルデータ (本番・クリーン運用時は空配列)
+const INITIAL_REQUESTS: BusinessRequest[] = [];
 
 const INITIAL_NOTIFICATIONS: NotificationSetting[] = [
   {
