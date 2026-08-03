@@ -78,7 +78,16 @@ export function RequestResponseModal({
     if (requestItem) {
       const st = requestItem.status === ('completed' as any) ? 'answered' : (requestItem.status || 'in_progress');
       setStatus(st);
-      setAssigneeName(requestItem.assigneeName || gyomuMembers[0] || GYOMU_PERSONS[0]);
+
+      // 初期値として依頼時に指定された工場・担当者があればそのまま反映
+      const initFactoryName = requestItem.estimateResponse?.factoryName || requestItem.factoryName || '';
+      const initFactoryCode = requestItem.estimateResponse?.factoryCode || requestItem.factoryCode || '';
+      const initAssignee = requestItem.assigneeName || gyomuMembers[0] || GYOMU_PERSONS[0];
+
+      setSelectedFactoryName(initFactoryName);
+      setFactoryCode(initFactoryCode);
+      setAssigneeName(initAssignee);
+
       setScheduledPurchaseDate(requestItem.scheduledPurchaseDate || '');
       setIncomingQuantity(requestItem.incomingQuantity || '');
       setResponseContent(requestItem.responseContent || '');
@@ -88,8 +97,6 @@ export function RequestResponseModal({
         const er = requestItem.estimateResponse;
         setGravurePlateCost(er.gravurePlateCost || '');
         setColorPlateCost(er.colorPlateCost || '');
-        setSelectedFactoryName(er.factoryName || '');
-        setFactoryCode(er.factoryCode || '');
 
         if (er.lots && er.lots.length > 0) {
           setLots(er.lots);
@@ -103,8 +110,6 @@ export function RequestResponseModal({
       } else {
         setGravurePlateCost('');
         setColorPlateCost('');
-        setSelectedFactoryName('');
-        setFactoryCode('');
         const defaultLotName = requestItem.estimateDetails?.quantity || '';
         setLots([
           { id: '1', lotName: defaultLotName, priceBag: '', priceRoll: '', deliveryDate: '' },
@@ -122,17 +127,41 @@ export function RequestResponseModal({
     }
   };
 
-  // 工場選択変更ハンドラー（工場担当業務員がセットされていれば自動割り当て）
-  const handleFactorySelect = (factoryName: string): void => {
-    setSelectedFactoryName(factoryName);
-    const matched = factoryList.find(f => f.name === factoryName);
+  // ① 工場名選択時：工場コード ＆ 担当業務員を自動記載
+  const handleFactorySelect = (factoryNameStr: string): void => {
+    setSelectedFactoryName(factoryNameStr);
+    const matched = factoryList.find(f => f.name === factoryNameStr);
     if (matched) {
-      setFactoryCode(matched.code);
+      setFactoryCode(matched.code || '');
       if (matched.defaultAssignee) {
         setAssigneeName(matched.defaultAssignee);
       }
-    } else if (factoryName === '') {
+    } else if (!factoryNameStr) {
       setFactoryCode('');
+    }
+  };
+
+  // ② 工場コード変更時：工場名 ＆ 担当業務員を自動記載
+  const handleFactoryCodeChange = (codeStr: string): void => {
+    setFactoryCode(codeStr);
+    const matched = factoryList.find(f => f.code === codeStr || f.code.toLowerCase() === codeStr.toLowerCase());
+    if (matched) {
+      setSelectedFactoryName(matched.name);
+      if (matched.defaultAssignee) {
+        setAssigneeName(matched.defaultAssignee);
+      }
+    }
+  };
+
+  // ③ 業務担当者変更時：該当工場があれば工場名・工場コードを自動記載
+  const handleAssigneeChange = (personName: string): void => {
+    setAssigneeName(personName);
+    if (personName) {
+      const matched = factoryList.find(f => f.defaultAssignee === personName);
+      if (matched) {
+        setSelectedFactoryName(matched.name);
+        setFactoryCode(matched.code);
+      }
     }
   };
 
@@ -156,6 +185,12 @@ export function RequestResponseModal({
     lines.push(`発信者: ${requestItem.requesterName} (${requestItem.requesterDept === 'sales' ? '営業' : 'CCR'})`);
     if (requestItem.customerName) {
       lines.push(`得意先名: ${requestItem.customerName}${requestItem.customerCode ? ` (CD: ${requestItem.customerCode})` : ''}`);
+    }
+    if (selectedFactoryName || factoryCode) {
+      lines.push(`指定工場: ${selectedFactoryName || '未指定'}${factoryCode ? ` (CD: ${factoryCode})` : ''}`);
+    }
+    if (assigneeName) {
+      lines.push(`業務担当: ${assigneeName}`);
     }
 
     if (requestItem.category === 'estimate_request' && est) {
@@ -236,6 +271,8 @@ export function RequestResponseModal({
         body: JSON.stringify({
           status,
           assigneeName,
+          factoryName: selectedFactoryName || undefined,
+          factoryCode: factoryCode || undefined,
           scheduledPurchaseDate: requestItem.category === 'delivery_check' ? scheduledPurchaseDate : undefined,
           incomingQuantity: requestItem.category === 'delivery_check' ? incomingQuantity : undefined,
           estimateResponse,
@@ -314,18 +351,56 @@ export function RequestResponseModal({
             </div>
           </div>
 
-          {/* 業務担当者 ＆ 受注番号 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                業務担当者名
-              </label>
-              <div className="relative">
-                <UserCheck className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          {/* 工場名・工場コード・業務担当者の3相互連動入力エリア */}
+          <div className="p-3.5 bg-slate-100/90 border border-slate-200 rounded-xl space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+              <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Building className="w-4 h-4 text-indigo-600" />
+                工場 ＆ 業務担当者連携 <span className="text-[10px] font-normal text-slate-500">（どれか入力で全記載）</span>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+              {/* 製造工場名 */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">製造工場名</label>
+                <select
+                  value={selectedFactoryName}
+                  onChange={e => handleFactorySelect(e.target.value)}
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">-- 工場を選択 --</option>
+                  {factoryList.map(f => (
+                    <option key={f.name} value={f.name}>
+                      {f.name} {f.defaultAssignee ? `(担当: ${f.defaultAssignee})` : ''}
+                    </option>
+                  ))}
+                  <option value="その他">その他</option>
+                </select>
+              </div>
+
+              {/* 工場コード */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">工場コード</label>
+                <input
+                  type="text"
+                  value={factoryCode}
+                  onChange={e => handleFactoryCodeChange(e.target.value)}
+                  placeholder="例: 221 / 554"
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* 業務担当者 */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1">
+                  <UserCheck className="w-3.5 h-3.5 text-sky-600" />
+                  業務担当者
+                </label>
                 <select
                   value={assigneeName}
-                  onChange={e => setAssigneeName(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  onChange={e => handleAssigneeChange(e.target.value)}
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 >
                   {gyomuMembers.map(person => (
                     <option key={person} value={person}>
@@ -335,19 +410,20 @@ export function RequestResponseModal({
                 </select>
               </div>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                受注番号 / 関連番号
-              </label>
-              <input
-                type="text"
-                value={orderNumber}
-                onChange={e => setOrderNumber(e.target.value)}
-                placeholder="例: ORD-2026-9901"
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
-              />
-            </div>
+          {/* 受注番号 / 関連番号 */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              受注番号 / 関連番号
+            </label>
+            <input
+              type="text"
+              value={orderNumber}
+              onChange={e => setOrderNumber(e.target.value)}
+              placeholder="例: ORD-2026-9901"
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
+            />
           </div>
 
           {/* 常時表示：依頼内容確認 ＆ 工場依頼用コピーボタン */}
@@ -592,42 +668,6 @@ export function RequestResponseModal({
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-
-              {/* 工場ドロップダウン選択（工場名のみ表示） ＆ 工場コード連動入力 */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1">
-                    <Building className="w-3.5 h-3.5 text-indigo-600" />
-                    製造工場名
-                  </label>
-                  <select
-                    value={selectedFactoryName}
-                    onChange={e => handleFactorySelect(e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-300 rounded-lg font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">-- 工場を選択してください --</option>
-                    {factoryList.map(f => (
-                      <option key={f.name} value={f.name}>
-                        {f.name} {f.defaultAssignee ? `(担当: ${f.defaultAssignee})` : ''}
-                      </option>
-                    ))}
-                    <option value="その他">その他 (直接コード入力)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    工場コード
-                  </label>
-                  <input
-                    type="text"
-                    value={factoryCode}
-                    onChange={e => setFactoryCode(e.target.value)}
-                    placeholder="例: 221"
-                    className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-indigo-900"
-                  />
                 </div>
               </div>
             </div>

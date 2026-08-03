@@ -83,6 +83,13 @@ export function createRequest(input: CreateRequestInput): BusinessRequest {
   const newId = `GYM-${todayStr}-${String(todayCount).padStart(3, '0')}`;
 
   const now = new Date().toISOString();
+
+  // 工場名・コードがあれば見積回答初期値にもセット
+  const initialEstimateResponse = (input.factoryName || input.factoryCode) ? {
+    factoryName: input.factoryName,
+    factoryCode: input.factoryCode,
+  } : undefined;
+
   const newRequest: BusinessRequest = {
     id: newId,
     category: input.category,
@@ -94,8 +101,12 @@ export function createRequest(input: CreateRequestInput): BusinessRequest {
     customerCode: input.customerCode,
     desiredDeliveryDate: input.desiredDeliveryDate,
     details: input.details,
+    assigneeName: input.assigneeName,
+    factoryName: input.factoryName,
+    factoryCode: input.factoryCode,
     products: input.products,
     estimateDetails: input.estimateDetails,
+    estimateResponse: initialEstimateResponse,
     attachments: input.attachments || [],
     status: 'pending',
     createdAt: now,
@@ -117,13 +128,25 @@ export function updateRequest(id: string, input: UpdateRequestInput): BusinessRe
   const current = requests[index];
   const now = new Date().toISOString();
 
+  // 工場更新時は estimateResponse も統合
+  let updatedEstimateResponse = input.estimateResponse !== undefined ? input.estimateResponse : current.estimateResponse;
+  if (input.factoryName !== undefined || input.factoryCode !== undefined) {
+    updatedEstimateResponse = {
+      ...(updatedEstimateResponse || {}),
+      factoryName: input.factoryName !== undefined ? input.factoryName : updatedEstimateResponse?.factoryName,
+      factoryCode: input.factoryCode !== undefined ? input.factoryCode : updatedEstimateResponse?.factoryCode,
+    };
+  }
+
   const updated: BusinessRequest = {
     ...current,
     status: input.status !== undefined ? input.status : current.status,
     assigneeName: input.assigneeName !== undefined ? input.assigneeName : current.assigneeName,
+    factoryName: input.factoryName !== undefined ? input.factoryName : current.factoryName,
+    factoryCode: input.factoryCode !== undefined ? input.factoryCode : current.factoryCode,
     scheduledPurchaseDate: input.scheduledPurchaseDate !== undefined ? input.scheduledPurchaseDate : current.scheduledPurchaseDate,
     incomingQuantity: input.incomingQuantity !== undefined ? input.incomingQuantity : current.incomingQuantity,
-    estimateResponse: input.estimateResponse !== undefined ? input.estimateResponse : current.estimateResponse,
+    estimateResponse: updatedEstimateResponse,
     responseContent: input.responseContent !== undefined ? input.responseContent : current.responseContent,
     orderNumber: input.orderNumber !== undefined ? input.orderNumber : current.orderNumber,
     desiredDeliveryDate: input.desiredDeliveryDate !== undefined ? input.desiredDeliveryDate : current.desiredDeliveryDate,

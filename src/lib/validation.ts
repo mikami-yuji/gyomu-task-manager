@@ -65,6 +65,9 @@ const createRequestSchema = z.object({
   issuerName: z.string().max(50).optional(),
   customerName: z.string().max(100).default(''),
   customerCode: z.string().max(50).optional(),
+  factoryName: z.string().max(100).optional(),
+  factoryCode: z.string().max(50).optional(),
+  assigneeName: z.string().max(50).optional(),
   desiredDeliveryDate: z.string().min(1, '希望納期は必須です'),
   details: z.string().max(1000).default(''),
   products: z.array(productItemSchema).optional(),
@@ -74,6 +77,8 @@ const createRequestSchema = z.object({
 const updateRequestSchema = z.object({
   status: z.enum(['pending', 'in_progress', 'answered', 'on_hold']).optional(),
   assigneeName: z.string().max(50).optional(),
+  factoryName: z.string().max(100).optional(),
+  factoryCode: z.string().max(50).optional(),
   scheduledPurchaseDate: z.string().optional(),
   incomingQuantity: z.string().optional(),
   estimateResponse: estimateResponseSchema.optional(),
@@ -93,6 +98,9 @@ export function validateAndSanitizeCreateInput(rawData: unknown): CreateRequestI
     issuerName: parsed.issuerName ? sanitizeInput(parsed.issuerName) : undefined,
     customerName: sanitizeInput(parsed.customerName),
     customerCode: parsed.customerCode ? sanitizeInput(parsed.customerCode) : undefined,
+    factoryName: parsed.factoryName ? sanitizeInput(parsed.factoryName) : undefined,
+    factoryCode: parsed.factoryCode ? sanitizeInput(parsed.factoryCode) : undefined,
+    assigneeName: parsed.assigneeName ? sanitizeInput(parsed.assigneeName) : undefined,
     desiredDeliveryDate: parsed.desiredDeliveryDate,
     details: sanitizeInput(parsed.details),
     products: parsed.products
@@ -125,6 +133,8 @@ export function validateAndSanitizeUpdateInput(rawData: unknown): UpdateRequestI
   return {
     status: parsed.status,
     assigneeName: parsed.assigneeName ? sanitizeInput(parsed.assigneeName) : undefined,
+    factoryName: parsed.factoryName ? sanitizeInput(parsed.factoryName) : undefined,
+    factoryCode: parsed.factoryCode ? sanitizeInput(parsed.factoryCode) : undefined,
     scheduledPurchaseDate: parsed.scheduledPurchaseDate ? sanitizeInput(parsed.scheduledPurchaseDate) : undefined,
     incomingQuantity: parsed.incomingQuantity ? sanitizeInput(parsed.incomingQuantity) : undefined,
     estimateResponse: parsed.estimateResponse

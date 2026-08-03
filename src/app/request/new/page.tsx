@@ -19,11 +19,15 @@ import {
   Trash2,
   Box,
   Layers,
+  Building,
+  UserCheck,
 } from 'lucide-react';
-import { RequestCategory, Department, ProductItem, EstimateDetails } from '@/types/request';
+import { RequestCategory, Department, ProductItem, EstimateDetails, FactoryMasterItem } from '@/types/request';
 import {
   SALES_PERSONS,
   CCR_PERSONS,
+  GYOMU_PERSONS,
+  FACTORY_MASTERS,
   PACKAGE_TYPE_OPTIONS,
   WINDOW_OPTION_OPTIONS,
   PACKAGE_FORM_OPTIONS,
@@ -40,9 +44,16 @@ export default function NewRequestPage(): React.JSX.Element {
   const [desiredDeliveryDate, setDesiredDeliveryDate] = useState<string>('');
   const [details, setDetails] = useState<string>('');
 
+  // 工場名・工場コード・業務担当者（相互自動補完）
+  const [factoryName, setFactoryName] = useState<string>('');
+  const [factoryCode, setFactoryCode] = useState<string>('');
+  const [assigneeName, setAssigneeName] = useState<string>('');
+
   // 動的マスターリスト
   const [salesMembers, setSalesMembers] = useState<string[]>([...SALES_PERSONS]);
   const [ccrMembers, setCcrMembers] = useState<string[]>([...CCR_PERSONS]);
+  const [gyomuMembers, setGyomuMembers] = useState<string[]>([...GYOMU_PERSONS]);
+  const [factoryList, setFactoryList] = useState<FactoryMasterItem[]>([...FACTORY_MASTERS]);
   
   // 欠品商品明細リスト
   const [products, setProducts] = useState<ProductItem[]>([
@@ -77,6 +88,8 @@ export default function NewRequestPage(): React.JSX.Element {
         if (json.success && json.data) {
           if (json.data.sales && json.data.sales.length > 0) setSalesMembers(json.data.sales);
           if (json.data.ccr && json.data.ccr.length > 0) setCcrMembers(json.data.ccr);
+          if (json.data.gyomu && json.data.gyomu.length > 0) setGyomuMembers(json.data.gyomu);
+          if (json.data.factories && json.data.factories.length > 0) setFactoryList(json.data.factories);
           setRequesterName(json.data.sales?.[0] || SALES_PERSONS[0]);
         }
       })
@@ -85,6 +98,44 @@ export default function NewRequestPage(): React.JSX.Element {
         setRequesterName(SALES_PERSONS[0]);
       });
   }, []);
+
+  // ① 工場名選択・入力時の相互連動（工場コード・担当業務員を自動記載）
+  const handleFactoryNameChange = (name: string): void => {
+    setFactoryName(name);
+    const matched = factoryList.find(f => f.name === name);
+    if (matched) {
+      setFactoryCode(matched.code || '');
+      if (matched.defaultAssignee) {
+        setAssigneeName(matched.defaultAssignee);
+      }
+    } else if (!name) {
+      setFactoryCode('');
+    }
+  };
+
+  // ② 工場コード選択・入力時の相互連動（工場名・担当業務員を自動記載）
+  const handleFactoryCodeChange = (code: string): void => {
+    setFactoryCode(code);
+    const matched = factoryList.find(f => f.code === code || f.code.toLowerCase() === code.toLowerCase());
+    if (matched) {
+      setFactoryName(matched.name);
+      if (matched.defaultAssignee) {
+        setAssigneeName(matched.defaultAssignee);
+      }
+    }
+  };
+
+  // ③ 業務担当者選択時の相互連動（紐づいている工場があれば自動記載）
+  const handleAssigneeNameChange = (person: string): void => {
+    setAssigneeName(person);
+    if (person) {
+      const matched = factoryList.find(f => f.defaultAssignee === person);
+      if (matched) {
+        setFactoryName(matched.name);
+        setFactoryCode(matched.code);
+      }
+    }
+  };
 
   const handleDeptChange = (dept: Department): void => {
     setRequesterDept(dept);
@@ -163,6 +214,9 @@ export default function NewRequestPage(): React.JSX.Element {
           issuerName: issuerName || undefined,
           customerName,
           customerCode: customerCode || undefined,
+          factoryName: factoryName || undefined,
+          factoryCode: factoryCode || undefined,
+          assigneeName: assigneeName || undefined,
           desiredDeliveryDate,
           details,
           products: validProducts,
@@ -191,6 +245,9 @@ export default function NewRequestPage(): React.JSX.Element {
     setRequesterDept('sales');
     setCustomerName('');
     setCustomerCode('');
+    setFactoryName('');
+    setFactoryCode('');
+    setAssigneeName('');
     setDesiredDeliveryDate('');
     setDetails('');
     setProducts([{ id: Date.now().toString(), catalogNumber: '', weightKg: '', productName: '', quantity: '1', unit: '枚' }]);
@@ -409,6 +466,67 @@ export default function NewRequestPage(): React.JSX.Element {
                     onChange={e => setDesiredDeliveryDate(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                </div>
+              </div>
+
+              {/* 工場名・工場コード・業務担当者（どれを入力しても全部が連動して自動記載） */}
+              <div className="p-4 bg-slate-100/80 border border-slate-200 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Building className="w-4 h-4 text-indigo-600" />
+                    依頼先工場 ＆ 担当者指定 <span className="text-[10px] font-normal text-slate-500">（どれか1つ入力・選択で全部自動記載）</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  {/* 工場名ドロップダウン / 直接入力 */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">製造工場名</label>
+                    <select
+                      value={factoryName}
+                      onChange={e => handleFactoryNameChange(e.target.value)}
+                      className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">-- 工場を選択 --</option>
+                      {factoryList.map(f => (
+                        <option key={f.name} value={f.name}>
+                          {f.name} {f.defaultAssignee ? `(担当: ${f.defaultAssignee})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 工場コード */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">工場コード</label>
+                    <input
+                      type="text"
+                      value={factoryCode}
+                      onChange={e => handleFactoryCodeChange(e.target.value)}
+                      placeholder="例: 221 / 554"
+                      className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-mono font-bold text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  {/* 業務担当者 */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1">
+                      <UserCheck className="w-3.5 h-3.5 text-sky-600" />
+                      業務担当者
+                    </label>
+                    <select
+                      value={assigneeName}
+                      onChange={e => handleAssigneeNameChange(e.target.value)}
+                      className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    >
+                      <option value="">-- 業務担当を選択 --</option>
+                      {gyomuMembers.map(person => (
+                        <option key={person} value={person}>
+                          {person}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 

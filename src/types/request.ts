@@ -81,6 +81,8 @@ export type BusinessRequest = {
   attachments: AttachmentFile[];
   status: RequestStatus;
   assigneeName?: string; // 業務課/仕入担当者
+  factoryName?: string;  // 依頼時の指定工場名
+  factoryCode?: string;  // 依頼時の指定工場コード
   scheduledPurchaseDate?: string; // 仕入予定日 / 入荷予定日
   incomingQuantity?: string; // 入荷数量
   estimateResponse?: EstimateResponse; // 見積回答（業務記入）
@@ -102,6 +104,9 @@ export type CreateRequestInput = {
   customerCode?: string;
   desiredDeliveryDate: string;
   details: string;
+  assigneeName?: string;
+  factoryName?: string;
+  factoryCode?: string;
   products?: ProductItem[];
   estimateDetails?: EstimateDetails;
   attachments?: AttachmentFile[];
@@ -111,6 +116,8 @@ export type CreateRequestInput = {
 export type UpdateRequestInput = {
   status?: RequestStatus;
   assigneeName?: string;
+  factoryName?: string;
+  factoryCode?: string;
   scheduledPurchaseDate?: string;
   incomingQuantity?: string;
   estimateResponse?: EstimateResponse;
