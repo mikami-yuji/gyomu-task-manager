@@ -1,10 +1,22 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { Header } from '@/components/Header';
-import { NotificationModal } from '@/components/NotificationModal';
-import { RequestResponseModal } from '@/components/RequestResponseModal';
-import { RequestDetailModal } from '@/components/RequestDetailModal';
+
+// モーダルを遅延ロード（Lazy Loading / ルール15準拠）
+const NotificationModal = dynamic(
+  () => import('@/components/NotificationModal').then(mod => mod.NotificationModal),
+  { ssr: false }
+);
+const RequestResponseModal = dynamic(
+  () => import('@/components/RequestResponseModal').then(mod => mod.RequestResponseModal),
+  { ssr: false }
+);
+const RequestDetailModal = dynamic(
+  () => import('@/components/RequestDetailModal').then(mod => mod.RequestDetailModal),
+  { ssr: false }
+);
 import {
   ShieldCheck,
   Search,

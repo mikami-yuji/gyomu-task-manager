@@ -23,6 +23,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# coverage
+coverage/
+
 # data storage
 data/*.json
+data/backups/
 !data/sample.json

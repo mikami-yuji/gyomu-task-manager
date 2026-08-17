@@ -6,6 +6,7 @@ import {
   getNotificationSettings,
   getMemberMasters,
   saveMemberMasters,
+  createDataBackup,
 } from '../src/lib/storage';
 
 describe('ストレージ層の動作テスト', () => {
@@ -73,5 +74,10 @@ describe('ストレージ層の動作テスト', () => {
 
     // クリーンアップ
     saveMemberMasters(initialMasters);
+  });
+
+  it('データバックアップファイルが正常に生成されること', () => {
+    const backupFileName = createDataBackup();
+    expect(backupFileName).toMatch(/^requests_backup_.*\.json$/);
   });
 });

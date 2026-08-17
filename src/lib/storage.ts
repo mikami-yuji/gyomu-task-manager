@@ -40,10 +40,55 @@ const INITIAL_MASTERS: MemberMaster = {
   memberEmails: {},
 };
 
+const BACKUP_DIR = path.join(DATA_DIR, 'backups');
+
 function ensureDataDirectory(): void {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
+  if (!fs.existsSync(BACKUP_DIR)) {
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+  }
+}
+
+/**
+ * アトミックにJSONファイルを安全に保存する関数
+ * 一時ファイルに書き出した後、アトミックにリネームすることで同時書き込みや中断時のファイル破損を防止する
+ */
+function atomicWriteJsonFile(filePath: string, data: unknown): void {
+  ensureDataDirectory();
+  const dir = path.dirname(filePath);
+  const tempPath = path.join(dir, `.${path.basename(filePath)}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`);
+  try {
+    const jsonString = JSON.stringify(data, null, 2);
+    fs.writeFileSync(tempPath, jsonString, 'utf-8');
+    fs.renameSync(tempPath, filePath);
+  } catch (error) {
+    if (fs.existsSync(tempPath)) {
+      try {
+        fs.unlinkSync(tempPath);
+      } catch {
+        // ignore cleanup error
+      }
+    }
+    console.error(`ファイル保存エラー (${filePath}):`, error);
+    throw error;
+  }
+}
+
+/**
+ * データのバックアップを生成する関数
+ */
+export function createDataBackup(): string {
+  ensureDataDirectory();
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[:.]/g, '-');
+  const backupFileName = `requests_backup_${timestamp}.json`;
+  const backupPath = path.join(BACKUP_DIR, backupFileName);
+
+  const requests = getAllRequests();
+  fs.writeFileSync(backupPath, JSON.stringify(requests, null, 2), 'utf-8');
+  return backupFileName;
 }
 
 export function getAllRequests(): BusinessRequest[] {
@@ -67,9 +112,8 @@ export function getRequestById(id: string): BusinessRequest | undefined {
 }
 
 export function saveRequests(requests: BusinessRequest[]): void {
-  ensureDataDirectory();
   try {
-    fs.writeFileSync(FILE_PATH, JSON.stringify(requests, null, 2), 'utf-8');
+    atomicWriteJsonFile(FILE_PATH, requests);
   } catch (error) {
     console.error('依頼データ保存エラー:', error);
   }
@@ -192,9 +236,8 @@ export function getNotificationSettings(): NotificationSetting[] {
 export const getAllNotificationSettings = getNotificationSettings;
 
 export function saveNotificationSettings(settings: NotificationSetting[]): void {
-  ensureDataDirectory();
   try {
-    fs.writeFileSync(NOTIF_FILE_PATH, JSON.stringify(settings, null, 2), 'utf-8');
+    atomicWriteJsonFile(NOTIF_FILE_PATH, settings);
   } catch (error) {
     console.error('通知設定保存エラー:', error);
   }
@@ -223,9 +266,8 @@ export function getMemberMasters(): MemberMaster {
 }
 
 export function saveMemberMasters(masters: MemberMaster): void {
-  ensureDataDirectory();
   try {
-    fs.writeFileSync(MASTER_FILE_PATH, JSON.stringify(masters, null, 2), 'utf-8');
+    atomicWriteJsonFile(MASTER_FILE_PATH, masters);
   } catch (error) {
     console.error('マスター保存エラー:', error);
   }
