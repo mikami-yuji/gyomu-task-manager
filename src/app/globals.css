@@ -48,3 +48,47 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* A4 帳票印刷用スタイル */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt;
+  }
+
+  /* 画面上の一般UI・ヘッダー・ボタン・オーバーレイを非表示 */
+  header,
+  nav,
+  .no-print,
+  button,
+  .modal-overlay-bg {
+    display: none !important;
+  }
+
+  /* モーダルの固定配置を解除し、伝票だけを印刷 */
+  .modal-container {
+    position: static !important;
+    display: block !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .printable-voucher {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 10mm 12mm;
+  }
+}
