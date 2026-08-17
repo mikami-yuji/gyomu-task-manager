@@ -17,6 +17,7 @@ const RequestDetailModal = dynamic(
   () => import('@/components/RequestDetailModal').then(mod => mod.RequestDetailModal),
   { ssr: false }
 );
+import { VoucherPreview } from '@/components/VoucherPreview';
 import {
   ShieldCheck,
   Search,
@@ -34,6 +35,11 @@ import {
   AlertCircle,
   MessageSquare,
   CheckCircle2,
+  Columns,
+  List,
+  User,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { BusinessRequest, RequestStatus } from '@/types/request';
 import { GYOMU_PERSONS, STATUS_CONFIG } from '@/lib/constants';
@@ -43,6 +49,10 @@ export default function AdminDashboardPage(): React.JSX.Element {
   const [gyomuMembers, setGyomuMembers] = useState<string[]>([...GYOMU_PERSONS]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string>('');
+
+  // 表示モード (2ペイン / 一覧表)
+  const [viewMode, setViewMode] = useState<'split' | 'table'>('table');
+  const [selectedSplitIndex, setSelectedSplitIndex] = useState<number>(0);
 
   // フィルター・絞り込み状態
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
@@ -160,6 +170,36 @@ export default function AdminDashboardPage(): React.JSX.Element {
         return b.id.localeCompare(a.id);
       });
   }, [requests, selectedAssignee, selectedRequester, selectedStatus, selectedCategory, searchQuery, startDate, endDate, sortOrder]);
+
+  // 2ペイン表示時のキーボード操作（↑ / ↓ キーで選択依頼を高速切り替え）
+  useEffect(() => {
+    if (viewMode !== 'split' || isNotifModalOpen || selectedResponseItem || selectedDetailItem) {
+      return;
+    }
+
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
+        return;
+      }
+
+      if (e.key === 'ArrowUp' || e.key === 'k') {
+        e.preventDefault();
+        setSelectedSplitIndex(prev => Math.max(0, prev - 1));
+      } else if (e.key === 'ArrowDown' || e.key === 'j') {
+        e.preventDefault();
+        setSelectedSplitIndex(prev => Math.min(filteredRequests.length - 1, prev + 1));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewMode, filteredRequests.length, isNotifModalOpen, selectedResponseItem, selectedDetailItem]);
+
+  useEffect(() => {
+    if (selectedSplitIndex >= filteredRequests.length && filteredRequests.length > 0) {
+      setSelectedSplitIndex(filteredRequests.length - 1);
+    }
+  }, [filteredRequests.length, selectedSplitIndex]);
 
   // 希望納期の期限判定スタイル計算関数
   const getDeliveryDateStyle = (desiredDate: string, status: string) => {
@@ -515,6 +555,29 @@ export default function AdminDashboardPage(): React.JSX.Element {
                 <option value="on_hold">保留</option>
               </select>
 
+              <div className="flex bg-slate-100 p-1 rounded-xl">
+                <button
+                  onClick={() => setViewMode('split')}
+                  className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                    viewMode === 'split' ? 'bg-white text-sky-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="2ペイン表示 (一覧 ＋ 伝票プレビュー)"
+                >
+                  <Columns className="w-4 h-4" />
+                  <span className="text-[11px]">2ペイン</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                    viewMode === 'table' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="一覧表テーブル表示"
+                >
+                  <List className="w-4 h-4" />
+                  <span className="text-[11px]">表</span>
+                </button>
+              </div>
+
               <button
                 onClick={() => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))}
                 className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-1"
@@ -593,6 +656,94 @@ export default function AdminDashboardPage(): React.JSX.Element {
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
             <Clock className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="font-bold text-base">対象の依頼がありません</p>
+          </div>
+        ) : viewMode === 'split' ? (
+          /* 2ペイン（一覧 ＋ 伝票プレビュー横並び）モード */
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* 左側: 依頼一覧リスト */}
+            <div className="lg:col-span-5 space-y-2.5 max-h-[calc(100vh-14rem)] overflow-y-auto pr-1">
+              <div className="flex items-center justify-between px-2 text-[11px] font-bold text-slate-500 pb-1 border-b border-slate-200">
+                <span>対象依頼: {filteredRequests.length}件</span>
+                <span className="text-sky-600 bg-sky-50 px-2 py-0.5 rounded font-mono">
+                  [ ↑ / ↓ キーで選択切替 ]
+                </span>
+              </div>
+
+              {filteredRequests.map((req, idx) => {
+                const isSelected = selectedSplitIndex === idx;
+                const categoryBadge =
+                  req.category === 'delivery_check' ? 'bg-sky-100 text-sky-800' :
+                  req.category === 'estimate_request' ? 'bg-indigo-100 text-indigo-800' :
+                  req.category === 'sample_request' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800';
+
+                const stKey = (req.status as string) === 'completed' ? 'answered' : req.status;
+                const stConf = STATUS_CONFIG[stKey] || STATUS_CONFIG.pending;
+                const deliveryStyle = getDeliveryDateStyle(req.desiredDeliveryDate, req.status);
+
+                return (
+                  <div
+                    key={req.id}
+                    onClick={() => setSelectedSplitIndex(idx)}
+                    className={`p-3.5 rounded-xl border transition-all cursor-pointer text-xs flex flex-col justify-between space-y-2 ${
+                      isSelected
+                        ? 'border-sky-500 bg-sky-50/90 shadow-md ring-2 ring-sky-500/20'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/80 shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-mono font-black text-sky-900">{req.id}</span>
+                        <span className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${categoryBadge}`}>
+                          {req.category === 'delivery_check' ? '納期' :
+                           req.category === 'estimate_request' ? '見積' :
+                           req.category === 'sample_request' ? 'サンプル' : '他'}
+                        </span>
+                      </div>
+
+                      <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${stConf.badgeStyle}`}>
+                        {stConf.label}
+                      </span>
+                    </div>
+
+                    <div>
+                      <p className={`font-bold text-sm line-clamp-1 ${isSelected ? 'text-sky-950' : 'text-slate-900'}`}>
+                        {req.title}
+                      </p>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
+                        <span className="font-semibold text-slate-700">担当: {req.assigneeName || '未割当'}</span>
+                        {req.customerName && <span>/ 顧客: {req.customerName}</span>}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
+                      <div className="flex items-center gap-1.5 truncate max-w-[55%]">
+                        <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{req.requesterName}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0 font-mono">
+                        <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span className={deliveryStyle.style}>{req.desiredDeliveryDate || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 右側: 選択中の伝票プレビュー (Sticky) */}
+            <div className="lg:col-span-7 sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
+              <VoucherPreview
+                requestItem={filteredRequests[selectedSplitIndex] || null}
+                currentIndex={selectedSplitIndex}
+                totalCount={filteredRequests.length}
+                onOpenResponseModal={item => setSelectedResponseItem(item)}
+                onNavigatePrev={() => setSelectedSplitIndex(prev => Math.max(0, prev - 1))}
+                onNavigateNext={() => setSelectedSplitIndex(prev => Math.min(filteredRequests.length - 1, prev + 1))}
+                hasPrev={selectedSplitIndex > 0}
+                hasNext={selectedSplitIndex < filteredRequests.length - 1}
+              />
+            </div>
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
