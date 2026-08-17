@@ -29,15 +29,23 @@ import {
   ChevronLeft,
   ChevronRight,
   StickyNote,
+  Sparkles,
+  Flame,
+  Inbox,
 } from 'lucide-react';
 import { BusinessRequest, RequestStatus } from '@/types/request';
 import { GYOMU_PERSONS, STATUS_CONFIG } from '@/lib/constants';
+
+export type AdminQuickFilterType = 'all' | 'urgent' | 'today_new' | 'in_progress' | 'answered_today';
 
 export default function AdminDashboardPage(): React.JSX.Element {
   const [requests, setRequests] = useState<BusinessRequest[]>([]);
   const [gyomuMembers, setGyomuMembers] = useState<string[]>([...GYOMU_PERSONS]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string>('');
+
+  // 今日のやることクイックタブ
+  const [quickFilter, setQuickFilter] = useState<AdminQuickFilterType>('all');
 
   // 表示モード (2ペイン / 一覧表)
   const [viewMode, setViewMode] = useState<'split' | 'table'>('table');
@@ -109,6 +117,58 @@ export default function AdminDashboardPage(): React.JSX.Element {
     return Array.from(set);
   }, [requests, gyomuMembers]);
 
+  // 今日の日付文字列
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+  }, []);
+
+  // 各クイックタブの件数集計
+  const quickCounts = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let urgent = 0;
+    let todayNew = 0;
+    let inProgress = 0;
+    let answeredToday = 0;
+
+    requests.forEach(r => {
+      const isAns = r.status === 'answered' || (r.status as string) === 'completed';
+
+      if (!isAns && r.desiredDeliveryDate) {
+        const target = new Date(r.desiredDeliveryDate);
+        target.setHours(0, 0, 0, 0);
+        const diffDays = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays <= 1 || r.status === 'pending') {
+          urgent++;
+        }
+      } else if (r.status === 'pending') {
+        urgent++;
+      }
+
+      if (r.createdAt && r.createdAt.startsWith(todayStr)) {
+        todayNew++;
+      }
+
+      if (r.status === 'in_progress') {
+        inProgress++;
+      }
+
+      if (isAns && ((r.updatedAt && r.updatedAt.startsWith(todayStr)) || (r.completedAt && r.completedAt.startsWith(todayStr)))) {
+        answeredToday++;
+      }
+    });
+
+    return {
+      all: requests.length,
+      urgent,
+      todayNew,
+      inProgress,
+      answeredToday,
+    };
+  }, [requests, todayStr]);
+
   // 発信者一覧
   const requesterList = useMemo(() => {
     const set = new Set<string>();
@@ -126,8 +186,35 @@ export default function AdminDashboardPage(): React.JSX.Element {
 
   // フィルタリング処理（テーブル表示用）
   const filteredRequests = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     return requests
       .filter(item => {
+        const isAns = item.status === 'answered' || (item.status as string) === 'completed';
+
+        // クイックフィルター
+        if (quickFilter === 'urgent') {
+          if (isAns) return false;
+          if (item.desiredDeliveryDate) {
+            const target = new Date(item.desiredDeliveryDate);
+            target.setHours(0, 0, 0, 0);
+            const diffDays = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays > 1 && item.status !== 'pending') return false;
+          } else if (item.status !== 'pending') {
+            return false;
+          }
+        } else if (quickFilter === 'today_new') {
+          if (!item.createdAt || !item.createdAt.startsWith(todayStr)) return false;
+        } else if (quickFilter === 'in_progress') {
+          if (item.status !== 'in_progress') return false;
+        } else if (quickFilter === 'answered_today') {
+          if (!isAns) return false;
+          const isUpdatedToday = item.updatedAt && item.updatedAt.startsWith(todayStr);
+          const isCompletedToday = item.completedAt && item.completedAt.startsWith(todayStr);
+          if (!isUpdatedToday && !isCompletedToday) return false;
+        }
+
         // 担当者フィルター
         if (selectedAssignee !== 'all' && item.assigneeName !== selectedAssignee) return false;
 
@@ -161,7 +248,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
         if (sortOrder === 'asc') return a.id.localeCompare(b.id);
         return b.id.localeCompare(a.id);
       });
-  }, [requests, selectedAssignee, selectedRequester, selectedStatus, selectedCategory, searchQuery, startDate, endDate, sortOrder]);
+  }, [requests, quickFilter, todayStr, selectedAssignee, selectedRequester, selectedStatus, selectedCategory, searchQuery, startDate, endDate, sortOrder]);
 
   // 2ペイン表示時のキーボード操作（↑ / ↓ キーで選択依頼を高速切り替え）
   useEffect(() => {
@@ -428,6 +515,101 @@ export default function AdminDashboardPage(): React.JSX.Element {
             <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
               <CheckCircle2 className="w-5 h-5" />
             </div>
+          </div>
+        </div>
+
+        {/* 🌟 「今日のやること」ワンクリッククイックタブバー */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+          <div className="flex items-center space-x-1.5 text-xs font-black text-slate-800">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span>業務課 朝礼・今日のやることクイック絞り込み:</span>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {/* 1. 今日やるべき */}
+            <button
+              type="button"
+              onClick={() => setQuickFilter(quickFilter === 'urgent' ? 'all' : 'urgent')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                quickFilter === 'urgent'
+                  ? 'bg-rose-600 text-white border-rose-700 shadow-md ring-2 ring-rose-400/30'
+                  : 'bg-rose-50/80 text-rose-800 border-rose-200 hover:bg-rose-100'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5 text-rose-500" />
+              <span>🚨 今日やるべき (至急・未対応)</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                quickFilter === 'urgent' ? 'bg-white text-rose-700' : 'bg-rose-200 text-rose-900'
+              }`}>
+                {quickCounts.urgent}
+              </span>
+            </button>
+
+            {/* 2. 今日の新着 */}
+            <button
+              type="button"
+              onClick={() => setQuickFilter(quickFilter === 'today_new' ? 'all' : 'today_new')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                quickFilter === 'today_new'
+                  ? 'bg-indigo-600 text-white border-indigo-700 shadow-md ring-2 ring-indigo-400/30'
+                  : 'bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-100'
+              }`}
+            >
+              <Inbox className="w-3.5 h-3.5 text-indigo-500" />
+              <span>📮 本日の新着依頼</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                quickFilter === 'today_new' ? 'bg-white text-indigo-700' : 'bg-indigo-200 text-indigo-900'
+              }`}>
+                {quickCounts.todayNew}
+              </span>
+            </button>
+
+            {/* 3. 確認中・仕入問合せ中 */}
+            <button
+              type="button"
+              onClick={() => setQuickFilter(quickFilter === 'in_progress' ? 'all' : 'in_progress')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                quickFilter === 'in_progress'
+                  ? 'bg-amber-600 text-white border-amber-700 shadow-md ring-2 ring-amber-400/30'
+                  : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
+              }`}
+            >
+              <span>🟡 確認中・問合せ中</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                quickFilter === 'in_progress' ? 'bg-white text-amber-800' : 'bg-amber-200 text-amber-950'
+              }`}>
+                {quickCounts.inProgress}
+              </span>
+            </button>
+
+            {/* 4. 本日回答済み */}
+            <button
+              type="button"
+              onClick={() => setQuickFilter(quickFilter === 'answered_today' ? 'all' : 'answered_today')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                quickFilter === 'answered_today'
+                  ? 'bg-emerald-700 text-white border-emerald-800 shadow-md ring-2 ring-emerald-400/30'
+                  : 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100'
+              }`}
+            >
+              <span>🟢 本日回答済み</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                quickFilter === 'answered_today' ? 'bg-white text-emerald-800' : 'bg-emerald-200 text-emerald-950'
+              }`}>
+                {quickCounts.answeredToday}
+              </span>
+            </button>
+
+            {/* 5. すべてクリア */}
+            {quickFilter !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setQuickFilter('all')}
+                className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors border border-slate-300"
+              >
+                ✕ 絞り込み解除 (全{quickCounts.all}件)
+              </button>
+            )}
           </div>
         </div>
 
