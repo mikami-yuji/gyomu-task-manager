@@ -80,9 +80,9 @@ export function RequestDetailModal({
       <div className="modal-overlay-bg absolute inset-0 -z-10" onClick={onClose} />
 
       {/* 伝票コンテナ */}
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-300 flex flex-col max-h-[92vh] printable-voucher">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-300 flex flex-col max-h-[92vh] print:max-h-none print:overflow-visible print:shadow-none print:border-none printable-voucher">
         {/* モーダル操作バー（画面用 / 印刷時は非表示） */}
-        <div className="px-6 py-3 bg-slate-900 text-white flex items-center justify-between no-print shrink-0">
+        <div className="px-6 py-3 bg-slate-900 text-white flex items-center justify-between no-print print:hidden shrink-0">
           <div className="flex items-center space-x-3">
             <span className="text-xs font-mono px-2 py-0.5 bg-slate-800 text-sky-300 rounded border border-slate-700">
               伝票番号: {requestItem.id}
@@ -113,7 +113,7 @@ export function RequestDetailModal({
         </div>
 
         {/* 帳票本体エリア */}
-        <div className="p-6 sm:p-8 overflow-y-auto space-y-5 bg-white text-slate-900">
+        <div className="p-6 sm:p-8 overflow-y-auto print:overflow-visible print:p-0 space-y-5 bg-white text-slate-900">
           {/* 帳票ヘッダー (タイトル・発行日・認印エリア) */}
           <div className="border-b-2 border-slate-800 pb-4">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -420,7 +420,7 @@ export function RequestDetailModal({
         </div>
 
         {/* モーダルフッター（画面用 / 印刷時は非表示） */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 no-print shrink-0">
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 no-print print:hidden shrink-0">
           <div className="flex items-center space-x-2 text-xs text-slate-500">
             <Clock className="w-3.5 h-3.5" />
             <span>最終更新: {new Date(requestItem.updatedAt).toLocaleString('ja-JP')}</span>

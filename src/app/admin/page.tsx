@@ -312,7 +312,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Header onOpenNotifications={() => setIsNotifModalOpen(true)} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 print:hidden">
         {/* タイトルヘッダー */}
         <div className="bg-slate-800 text-white rounded-2xl p-6 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
