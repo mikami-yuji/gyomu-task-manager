@@ -88,6 +88,7 @@ export type BusinessRequest = {
   estimateResponse?: EstimateResponse; // 見積回答（業務記入）
   responseContent?: string; // 業務課・仕入Gからの回答コメント
   orderNumber?: string; // 受注番号
+  internalNote?: string; // 社内用付箋メモ（相手には通知されない課内・個人用の走り書き）
   completedAt?: string; // 完了日時 ISO文字列
   createdAt: string; // 作成日時 ISO文字列
   updatedAt: string; // 更新日時 ISO文字列
@@ -110,6 +111,7 @@ export type CreateRequestInput = {
   products?: ProductItem[];
   estimateDetails?: EstimateDetails;
   attachments?: AttachmentFile[];
+  internalNote?: string;
 };
 
 /** 依頼更新パラメータ */
@@ -123,6 +125,7 @@ export type UpdateRequestInput = {
   estimateResponse?: EstimateResponse;
   responseContent?: string;
   orderNumber?: string;
+  internalNote?: string;
   desiredDeliveryDate?: string;
   details?: string;
 };

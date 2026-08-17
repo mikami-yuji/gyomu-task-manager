@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Printer,
   Calendar,
@@ -17,6 +17,10 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  StickyNote,
+  Save,
+  Check,
+  AlertTriangle,
 } from 'lucide-react';
 import { BusinessRequest } from '@/types/request';
 
@@ -47,6 +51,17 @@ export function VoucherPreview({
   totalCount,
   isModal = false,
 }: VoucherPreviewProps): React.JSX.Element {
+  const [internalNoteText, setInternalNoteText] = useState<string>('');
+  const [isSavingNote, setIsSavingNote] = useState<boolean>(false);
+  const [noteSavedFeedback, setNoteSavedFeedback] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (requestItem) {
+      setInternalNoteText(requestItem.internalNote || '');
+      setNoteSavedFeedback(false);
+    }
+  }, [requestItem]);
+
   if (!requestItem) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-300">
@@ -66,14 +81,53 @@ export function VoucherPreview({
   const isInProgress = requestItem.status === 'in_progress';
   const isOnHold = requestItem.status === 'on_hold';
 
-  const statusStampText = isAnswered ? '回答済' : isInProgress ? '確認中' : isOnHold ? '保留' : '未着手';
+  // 信号機カラーのステータス印鑑
+  const statusStampText = isAnswered ? '回答済' : isInProgress ? '確認中' : isOnHold ? '保留' : '未対応';
   const statusStampColor = isAnswered
-    ? 'border-emerald-600 text-emerald-700 bg-emerald-50/70'
+    ? 'border-emerald-600 text-emerald-700 bg-emerald-50/80 shadow-emerald-100'
     : isInProgress
-    ? 'border-sky-600 text-sky-700 bg-sky-50/70'
+    ? 'border-amber-500 text-amber-800 bg-amber-50/80 shadow-amber-100'
     : isOnHold
-    ? 'border-slate-500 text-slate-600 bg-slate-50/70'
-    : 'border-amber-600 text-amber-700 bg-amber-50/70';
+    ? 'border-slate-500 text-slate-600 bg-slate-50/80 shadow-slate-100'
+    : 'border-rose-600 text-rose-700 bg-rose-50/80 shadow-rose-100';
+
+  // 期限アラート判定
+  let deadlineAlert: { isAlert: boolean; isOverdue: boolean; label: string } | null = null;
+  if (requestItem.desiredDeliveryDate && !isAnswered) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(requestItem.desiredDeliveryDate);
+    target.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) {
+      deadlineAlert = { isAlert: true, isOverdue: true, label: `⚠️ 期限超過 (${Math.abs(diffDays)}日遅れ)` };
+    } else if (diffDays === 0) {
+      deadlineAlert = { isAlert: true, isOverdue: false, label: '⚠️ 本日期限 (至急)' };
+    } else if (diffDays === 1) {
+      deadlineAlert = { isAlert: true, isOverdue: false, label: '⚠️ 明日期限 (至急)' };
+    }
+  }
+
+  // 社内付箋メモの保存ハンドラー
+  const handleSaveInternalNote = async (): Promise<void> => {
+    setIsSavingNote(true);
+    try {
+      const res = await fetch(`/api/requests/${encodeURIComponent(requestItem.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ internalNote: internalNoteText }),
+      });
+      if (res.ok) {
+        requestItem.internalNote = internalNoteText;
+        setNoteSavedFeedback(true);
+        setTimeout(() => setNoteSavedFeedback(false), 2500);
+      }
+    } catch (err) {
+      console.error('付箋メモ保存エラー:', err);
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
 
   const est = requestItem.estimateDetails;
   const res = requestItem.estimateResponse;
@@ -161,11 +215,25 @@ export function VoucherPreview({
         <div className="border-b-2 border-slate-800 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-black tracking-wider text-slate-900">業務課 依頼・回答伝票</h1>
                 <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-700 font-bold border border-slate-300 rounded">
                   {categoryLabel}
                 </span>
+
+                {/* 期限超過・至急アラートバッジ（パルス点滅） */}
+                {deadlineAlert && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black border shadow-sm animate-pulse ${
+                      deadlineAlert.isOverdue
+                        ? 'bg-rose-100 text-rose-800 border-rose-400 ring-2 ring-rose-500/20'
+                        : 'bg-amber-100 text-amber-900 border-amber-400 ring-2 ring-amber-500/20'
+                    }`}
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    {deadlineAlert.label}
+                  </span>
+                )}
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 mt-2 font-mono">
                 <p><strong>伝票番号:</strong> {requestItem.id}</p>
@@ -178,7 +246,7 @@ export function VoucherPreview({
 
             {/* 認印・ステータス印鑑エリア */}
             <div className="flex items-center gap-2 self-end sm:self-auto">
-              {/* ステータス印 */}
+              {/* 信号機カラー ステータス印 */}
               <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-dashed flex flex-col items-center justify-center font-bold rotate-[-6deg] shadow-sm shrink-0 ${statusStampColor}`}>
                 <span className="text-[9px] tracking-tighter">ステータス</span>
                 <span className="text-xs font-black">{statusStampText}</span>
@@ -201,6 +269,47 @@ export function VoucherPreview({
               </div>
             </div>
           </div>
+        </div>
+
+        {/* 📌 社内付箋（ポストイット）メモ欄（現場用・相手には見えない走り書き） */}
+        <div className="sticky-note-paper p-3.5 rounded-xl border border-yellow-300 text-slate-900 relative">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="flex items-center space-x-1.5 text-xs font-black text-amber-950">
+              <StickyNote className="w-4 h-4 text-amber-700" />
+              <span>社内付箋メモ (相手には通知されない課内・個人用の走り書き)</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveInternalNote}
+              disabled={isSavingNote}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm ${
+                noteSavedFeedback
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-amber-900 hover:bg-amber-800 text-yellow-100'
+              }`}
+            >
+              {noteSavedFeedback ? (
+                <>
+                  <Check className="w-3.5 h-3.5" />
+                  <span>保存済</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{isSavingNote ? '保存中...' : '付箋を保存'}</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <textarea
+            value={internalNoteText}
+            onChange={e => setInternalNoteText(e.target.value)}
+            placeholder="例: 〇〇工場に確認中 8/18 10:00、次回入荷時に同梱手配 など"
+            rows={2}
+            className="w-full bg-yellow-100/70 border border-yellow-300/80 rounded-lg p-2 text-xs text-slate-900 placeholder:text-amber-800/50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all font-sans resize-y"
+          />
         </div>
 
         {/* 依頼件名 */}

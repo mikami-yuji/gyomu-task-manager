@@ -28,6 +28,7 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
+  StickyNote,
 } from 'lucide-react';
 import { BusinessRequest, RequestStatus } from '@/types/request';
 import { GYOMU_PERSONS, STATUS_CONFIG } from '@/lib/constants';
@@ -213,7 +214,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
     if (diffDays < 0) {
       // 期限超過（赤色）
       return {
-        style: 'bg-rose-100 text-rose-800 border border-rose-300 font-bold px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm',
+        style: 'bg-rose-100 text-rose-900 border border-rose-400 font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm animate-pulse ring-2 ring-rose-500/20',
         isOverdue: true,
         isImminent: false,
         label: `${desiredDate} (超過)`,
@@ -221,7 +222,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
     } else if (diffDays === 0 || diffDays === 1) {
       // 当日または1日前（黄色）
       return {
-        style: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm',
+        style: 'bg-amber-100 text-amber-950 border border-amber-400 font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm animate-pulse ring-2 ring-amber-500/20',
         isOverdue: false,
         isImminent: true,
         label: diffDays === 0 ? `${desiredDate} (本日)` : `${desiredDate} (明日)`,
@@ -387,33 +388,39 @@ export default function AdminDashboardPage(): React.JSX.Element {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-amber-200 flex items-center justify-between">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-rose-300 flex items-center justify-between">
             <div>
-              <p className="text-xs text-amber-800 font-bold">未着手・対応待ち</p>
-              <p className="text-2xl font-black text-amber-700">
+              <p className="text-xs text-rose-800 font-bold flex items-center gap-1">
+                <span>🔴</span> 未対応・要対応
+              </p>
+              <p className="text-2xl font-black text-rose-700">
                 {requests.filter(r => r.status === 'pending').length}
               </p>
             </div>
-            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
+            <div className="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
               <AlertCircle className="w-5 h-5" />
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-sky-200 flex items-center justify-between">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-amber-300 flex items-center justify-between">
             <div>
-              <p className="text-xs text-sky-800 font-bold">確認中・対応中</p>
-              <p className="text-2xl font-black text-sky-700">
+              <p className="text-xs text-amber-900 font-bold flex items-center gap-1">
+                <span>🟡</span> 確認中・対応中
+              </p>
+              <p className="text-2xl font-black text-amber-700">
                 {requests.filter(r => r.status === 'in_progress').length}
               </p>
             </div>
-            <div className="p-2.5 bg-sky-50 text-sky-600 rounded-xl">
+            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
               <MessageSquare className="w-5 h-5" />
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-emerald-200 flex items-center justify-between">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-emerald-300 flex items-center justify-between">
             <div>
-              <p className="text-xs text-emerald-800 font-bold">回答済み</p>
+              <p className="text-xs text-emerald-900 font-bold flex items-center gap-1">
+                <span>🟢</span> 回答済み
+              </p>
               <p className="text-2xl font-black text-emerald-700">
                 {requests.filter(r => r.status === 'answered' || (r.status as any) === 'completed').length}
               </p>
@@ -689,9 +696,16 @@ export default function AdminDashboardPage(): React.JSX.Element {
                            req.category === 'estimate_request' ? '見積' :
                            req.category === 'sample_request' ? 'サンプル' : '他'}
                         </span>
+                        {req.internalNote && (
+                          <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-900 border border-yellow-300 rounded font-bold text-[10px] flex items-center gap-0.5" title={`社内付箋: ${req.internalNote}`}>
+                            <StickyNote className="w-3 h-3 text-amber-700" />
+                            付箋あり
+                          </span>
+                        )}
                       </div>
 
-                      <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${stConf.badgeStyle}`}>
+                      <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border flex items-center gap-1 ${stConf.badgeStyle}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${stConf.dotColor}`}></span>
                         {stConf.label}
                       </span>
                     </div>
@@ -704,6 +718,12 @@ export default function AdminDashboardPage(): React.JSX.Element {
                         <span className="font-semibold text-slate-700">担当: {req.assigneeName || '未割当'}</span>
                         {req.customerName && <span>/ 顧客: {req.customerName}</span>}
                       </div>
+                      {req.internalNote && (
+                        <p className="text-amber-900 bg-yellow-50/90 border border-yellow-200/80 rounded px-2 py-0.5 text-[11px] truncate mt-1 flex items-center gap-1">
+                          <StickyNote className="w-3 h-3 text-amber-600 shrink-0" />
+                          <span>{req.internalNote}</span>
+                        </p>
+                      )}
                     </div>
 
                     <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
@@ -850,9 +870,16 @@ export default function AdminDashboardPage(): React.JSX.Element {
 
                       {/* ステータス */}
                       <td className="p-3 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] border ${stConf.badgeStyle}`}>
+                        <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] border flex items-center gap-1 w-fit ${stConf.badgeStyle}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${stConf.dotColor}`}></span>
                           {stConf.label}
                         </span>
+                        {req.internalNote && (
+                          <span className="mt-1 px-1.5 py-0.5 bg-yellow-100 text-yellow-900 border border-yellow-300 rounded font-bold text-[9px] flex items-center gap-0.5 w-fit" title={`社内付箋: ${req.internalNote}`}>
+                            <StickyNote className="w-2.5 h-2.5 text-amber-700" />
+                            付箋あり
+                          </span>
+                        )}
                       </td>
 
                       {/* 管理操作 */}

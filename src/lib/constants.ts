@@ -106,34 +106,42 @@ export const FACTORY_MASTERS: FactoryMasterItem[] = [
 ];
 
 /**
- * ステータス設定統一（回答済みをグリーン/emeraldにし、完了を撤去）
+ * ステータス設定（信号機カラー：🔴 未対応 / 🟡 確認中 / 🟢 回答済み / ⚪ 保留）
  */
 export const STATUS_CONFIG = {
   pending: {
-    label: '未着手',
-    badgeStyle: 'bg-amber-100 text-amber-800 border-amber-300',
-    cardBorder: 'border-amber-200',
-    cardText: 'text-amber-700',
-    cardBg: 'bg-amber-50 text-amber-600',
+    label: '未対応',
+    emoji: '🔴',
+    dotColor: 'bg-rose-500',
+    badgeStyle: 'bg-rose-100 text-rose-800 border-rose-300 font-bold',
+    cardBorder: 'border-rose-300',
+    cardText: 'text-rose-700',
+    cardBg: 'bg-rose-50 text-rose-600',
   },
   in_progress: {
     label: '確認中',
-    badgeStyle: 'bg-sky-100 text-sky-800 border-sky-300',
-    cardBorder: 'border-sky-200',
-    cardText: 'text-sky-700',
-    cardBg: 'bg-sky-50 text-sky-600',
+    emoji: '🟡',
+    dotColor: 'bg-amber-500',
+    badgeStyle: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
+    cardBorder: 'border-amber-300',
+    cardText: 'text-amber-700',
+    cardBg: 'bg-amber-50 text-amber-600',
   },
   answered: {
     label: '回答済み',
-    badgeStyle: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-    cardBorder: 'border-emerald-200',
+    emoji: '🟢',
+    dotColor: 'bg-emerald-500',
+    badgeStyle: 'bg-emerald-100 text-emerald-900 border-emerald-300 font-bold',
+    cardBorder: 'border-emerald-300',
     cardText: 'text-emerald-700',
     cardBg: 'bg-emerald-50 text-emerald-600',
   },
   on_hold: {
     label: '保留',
-    badgeStyle: 'bg-slate-100 text-slate-800 border-slate-300',
-    cardBorder: 'border-slate-200',
+    emoji: '⚪',
+    dotColor: 'bg-slate-400',
+    badgeStyle: 'bg-slate-100 text-slate-800 border-slate-300 font-bold',
+    cardBorder: 'border-slate-300',
     cardText: 'text-slate-700',
     cardBg: 'bg-slate-50 text-slate-600',
   },

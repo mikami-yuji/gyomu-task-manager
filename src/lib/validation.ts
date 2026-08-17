@@ -72,6 +72,7 @@ const createRequestSchema = z.object({
   details: z.string().max(1000).default(''),
   products: z.array(productItemSchema).optional(),
   estimateDetails: estimateDetailsSchema.optional(),
+  internalNote: z.string().max(1000).optional(),
 });
 
 const updateRequestSchema = z.object({
@@ -84,6 +85,7 @@ const updateRequestSchema = z.object({
   estimateResponse: estimateResponseSchema.optional(),
   responseContent: z.string().max(1000).optional(),
   orderNumber: z.string().max(50).optional(),
+  internalNote: z.string().max(1000).optional(),
   desiredDeliveryDate: z.string().optional(),
   details: z.string().max(1000).optional(),
 });
@@ -103,6 +105,7 @@ export function validateAndSanitizeCreateInput(rawData: unknown): CreateRequestI
     assigneeName: parsed.assigneeName ? sanitizeInput(parsed.assigneeName) : undefined,
     desiredDeliveryDate: parsed.desiredDeliveryDate,
     details: sanitizeInput(parsed.details),
+    internalNote: parsed.internalNote ? sanitizeInput(parsed.internalNote) : undefined,
     products: parsed.products
       ? parsed.products.map(p => ({
           id: p.id,
@@ -160,6 +163,7 @@ export function validateAndSanitizeUpdateInput(rawData: unknown): UpdateRequestI
       : undefined,
     responseContent: parsed.responseContent ? sanitizeInput(parsed.responseContent) : undefined,
     orderNumber: parsed.orderNumber ? sanitizeInput(parsed.orderNumber) : undefined,
+    internalNote: parsed.internalNote ? sanitizeInput(parsed.internalNote) : undefined,
     desiredDeliveryDate: parsed.desiredDeliveryDate,
     details: parsed.details ? sanitizeInput(parsed.details) : undefined,
   };
