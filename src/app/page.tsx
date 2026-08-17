@@ -105,6 +105,12 @@ export default function DashboardPage(): React.JSX.Element {
     return d.toISOString().split('T')[0];
   }, []);
 
+  // 選択中ユーザーで絞り込んだ依頼リスト（サマリー＆タブ連動用）
+  const userTargetRequests = useMemo(() => {
+    if (!currentUserName) return requests;
+    return requests.filter(r => r.assigneeName === currentUserName || r.requesterName === currentUserName);
+  }, [requests, currentUserName]);
+
   // 各クイックタブの件数集計
   const quickCounts = useMemo(() => {
     const today = new Date();
@@ -116,7 +122,7 @@ export default function DashboardPage(): React.JSX.Element {
     let inProgress = 0;
     let answeredToday = 0;
 
-    requests.forEach(r => {
+    userTargetRequests.forEach(r => {
       const isAns = r.status === 'answered' || (r.status as string) === 'completed';
 
       // 1. 今日やるべき (至急・期限超過・未対応)
@@ -153,14 +159,14 @@ export default function DashboardPage(): React.JSX.Element {
     });
 
     return {
-      all: requests.length,
+      all: userTargetRequests.length,
       urgent,
       myTasks,
       todayNew,
       inProgress,
       answeredToday,
     };
-  }, [requests, currentUserName, todayStr]);
+  }, [userTargetRequests, currentUserName, todayStr]);
 
   // 発信者一覧の抽出 (ユニークリスト)
   const requesterList = useMemo(() => {
@@ -309,12 +315,14 @@ export default function DashboardPage(): React.JSX.Element {
       <Header />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 print:hidden">
-        {/* 上部サマリーカード (信号機カラー) */}
+        {/* 上部サマリーカード (信号機カラー・ユーザー連動) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
             <div>
-              <p className="text-xs text-slate-500 font-bold">全依頼数</p>
-              <p className="text-2xl font-black text-slate-800">{requests.length}</p>
+              <p className="text-xs text-slate-500 font-bold">
+                {currentUserName ? `${currentUserName}の関連依頼` : '全依頼数'}
+              </p>
+              <p className="text-2xl font-black text-slate-800">{userTargetRequests.length}</p>
             </div>
             <div className="p-3 bg-slate-100 text-slate-600 rounded-xl">
               <Clock className="w-6 h-6" />
@@ -327,7 +335,7 @@ export default function DashboardPage(): React.JSX.Element {
                 <span>🔴</span> 未対応・要対応
               </p>
               <p className="text-2xl font-black text-rose-700">
-                {requests.filter(r => r.status === 'pending').length}
+                {userTargetRequests.filter(r => r.status === 'pending').length}
               </p>
             </div>
             <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
@@ -341,7 +349,7 @@ export default function DashboardPage(): React.JSX.Element {
                 <span>🟡</span> 確認中・対応中
               </p>
               <p className="text-2xl font-black text-amber-700">
-                {requests.filter(r => r.status === 'in_progress').length}
+                {userTargetRequests.filter(r => r.status === 'in_progress').length}
               </p>
             </div>
             <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
@@ -355,7 +363,7 @@ export default function DashboardPage(): React.JSX.Element {
                 <span>🟢</span> 回答済み
               </p>
               <p className="text-2xl font-black text-emerald-700">
-                {requests.filter(r => r.status === 'answered' || (r.status as string) === 'completed').length}
+                {userTargetRequests.filter(r => r.status === 'answered' || (r.status as string) === 'completed').length}
               </p>
             </div>
             <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">

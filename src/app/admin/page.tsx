@@ -123,7 +123,13 @@ export default function AdminDashboardPage(): React.JSX.Element {
     return d.toISOString().split('T')[0];
   }, []);
 
-  // 各クイックタブの件数集計
+  // 選択中の担当者で絞り込んだ依頼リスト（サマリー＆クイックタブ＆カテゴリの件数集計用）
+  const assigneeFilteredRequests = useMemo(() => {
+    if (selectedAssignee === 'all') return requests;
+    return requests.filter(r => r.assigneeName === selectedAssignee);
+  }, [requests, selectedAssignee]);
+
+  // 各クイックタブの件数集計（選択中の業務担当者に連動）
   const quickCounts = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -133,7 +139,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
     let inProgress = 0;
     let answeredToday = 0;
 
-    requests.forEach(r => {
+    assigneeFilteredRequests.forEach(r => {
       const isAns = r.status === 'answered' || (r.status as string) === 'completed';
 
       if (!isAns && r.desiredDeliveryDate) {
@@ -161,13 +167,13 @@ export default function AdminDashboardPage(): React.JSX.Element {
     });
 
     return {
-      all: requests.length,
+      all: assigneeFilteredRequests.length,
       urgent,
       todayNew,
       inProgress,
       answeredToday,
     };
-  }, [requests, todayStr]);
+  }, [assigneeFilteredRequests, todayStr]);
 
   // 発信者一覧
   const requesterList = useMemo(() => {
@@ -177,12 +183,6 @@ export default function AdminDashboardPage(): React.JSX.Element {
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'ja'));
   }, [requests]);
-
-  // 選択中の担当者で絞り込んだ依頼リスト（カテゴリの件数集計用）
-  const assigneeFilteredRequests = useMemo(() => {
-    if (selectedAssignee === 'all') return requests;
-    return requests.filter(r => r.assigneeName === selectedAssignee);
-  }, [requests, selectedAssignee]);
 
   // フィルタリング処理（テーブル表示用）
   const filteredRequests = useMemo(() => {
@@ -463,12 +463,14 @@ export default function AdminDashboardPage(): React.JSX.Element {
           </div>
         </div>
 
-        {/* 統計カウンター */}
+        {/* 統計カウンター（選択中の担当者に連動） */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
             <div>
-              <p className="text-xs text-slate-500 font-bold">全件</p>
-              <p className="text-2xl font-black text-slate-800">{requests.length}</p>
+              <p className="text-xs text-slate-500 font-bold">
+                {selectedAssignee === 'all' ? '全件' : `${selectedAssignee}の全件`}
+              </p>
+              <p className="text-2xl font-black text-slate-800">{assigneeFilteredRequests.length}</p>
             </div>
             <div className="p-2.5 bg-slate-100 text-slate-600 rounded-xl">
               <Clock className="w-5 h-5" />
@@ -481,7 +483,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
                 <span>🔴</span> 未対応・要対応
               </p>
               <p className="text-2xl font-black text-rose-700">
-                {requests.filter(r => r.status === 'pending').length}
+                {assigneeFilteredRequests.filter(r => r.status === 'pending').length}
               </p>
             </div>
             <div className="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
@@ -495,7 +497,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
                 <span>🟡</span> 確認中・対応中
               </p>
               <p className="text-2xl font-black text-amber-700">
-                {requests.filter(r => r.status === 'in_progress').length}
+                {assigneeFilteredRequests.filter(r => r.status === 'in_progress').length}
               </p>
             </div>
             <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
@@ -509,7 +511,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
                 <span>🟢</span> 回答済み
               </p>
               <p className="text-2xl font-black text-emerald-700">
-                {requests.filter(r => r.status === 'answered' || (r.status as any) === 'completed').length}
+                {assigneeFilteredRequests.filter(r => r.status === 'answered' || (r.status as any) === 'completed').length}
               </p>
             </div>
             <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
@@ -518,11 +520,18 @@ export default function AdminDashboardPage(): React.JSX.Element {
           </div>
         </div>
 
-        {/* 🌟 「今日のやること」ワンクリッククイックタブバー */}
+        {/* 🌟 「今日のやること」ワンクリッククイックタブバー（担当者連動） */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
           <div className="flex items-center space-x-1.5 text-xs font-black text-slate-800">
             <Sparkles className="w-4 h-4 text-amber-500" />
-            <span>業務課 朝礼・今日のやることクイック絞り込み:</span>
+            <span>
+              今日のやることクイック絞り込み
+              {selectedAssignee !== 'all' ? (
+                <span className="text-sky-700 font-black ml-1">【{selectedAssignee} 担当分】</span>
+              ) : (
+                <span className="text-slate-500 font-normal ml-1">【全員分】</span>
+              )}:
+            </span>
           </div>
 
           <div className="flex flex-wrap gap-2">
