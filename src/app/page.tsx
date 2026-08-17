@@ -32,6 +32,8 @@ import {
 } from 'lucide-react';
 import { BusinessRequest } from '@/types/request';
 import { STATUS_CONFIG, GYOMU_PERSONS } from '@/lib/constants';
+import { playChimeNotification } from '@/lib/sound';
+import NewRequestToast from '@/components/NewRequestToast';
 
 export type QuickFilterType = 'all' | 'urgent' | 'my_tasks' | 'today_new' | 'in_progress' | 'answered_today';
 
@@ -59,6 +61,10 @@ export default function DashboardPage(): React.JSX.Element {
   const [selectedResponseItem, setSelectedResponseItem] = useState<BusinessRequest | null>(null);
   const [selectedDetailItem, setSelectedDetailItem] = useState<BusinessRequest | null>(null);
 
+  // 新着通知トースト状態
+  const [newIncomingRequests, setNewIncomingRequests] = useState<BusinessRequest[]>([]);
+  const prevRequestIdsRef = React.useRef<Set<string> | null>(null);
+
   // 初回ユーザー名復元
   useEffect(() => {
     const savedName = localStorage.getItem('gyomu_user_name');
@@ -72,9 +78,11 @@ export default function DashboardPage(): React.JSX.Element {
     localStorage.setItem('gyomu_user_name', name);
   };
 
-  // データ取得関数
-  const fetchRequests = async (): Promise<void> => {
-    setLoading(true);
+  // データ取得関数（バックグラウンド更新対応）
+  const fetchRequests = async (isBackground = false): Promise<void> => {
+    if (!isBackground) {
+      setLoading(true);
+    }
     setErrorMsg('');
     try {
       const res = await fetch('/api/requests');
@@ -83,20 +91,45 @@ export default function DashboardPage(): React.JSX.Element {
       }
       const json = await res.json();
       if (json.success) {
-        setRequests(json.data);
+        const incoming: BusinessRequest[] = json.data;
+
+        // 初回ロード以降に新規依頼が増えたかチェック
+        if (prevRequestIdsRef.current !== null) {
+          const newItems = incoming.filter(item => !prevRequestIdsRef.current?.has(item.id));
+          if (newItems.length > 0) {
+            // 新着依頼を検知！優しいチャイム音を再生
+            playChimeNotification();
+            setNewIncomingRequests(newItems);
+          }
+        }
+
+        // 現在の全IDを記憶
+        prevRequestIdsRef.current = new Set(incoming.map(r => r.id));
+        setRequests(incoming);
       } else {
         setErrorMsg(json.error || 'データの取得に失敗しました');
       }
     } catch (err) {
       console.error('データフェッチエラー:', err);
-      setErrorMsg('通信エラーが発生しました。しばらく待ってから再読み込みしてください。');
+      if (!isBackground) {
+        setErrorMsg('通信エラーが発生しました。しばらく待ってから再読み込みしてください。');
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
     }
   };
 
+  // 初回取得 ＆ 30秒ごとの自動バックグラウンドポーリング
   useEffect(() => {
-    fetchRequests();
+    fetchRequests(false);
+
+    const timer = setInterval(() => {
+      fetchRequests(true);
+    }, 30000); // 30秒ごと
+
+    return () => clearInterval(timer);
   }, []);
 
   // 今日の日付文字列 (YYYY-MM-DD)
@@ -538,7 +571,8 @@ export default function DashboardPage(): React.JSX.Element {
 
             <div className="flex items-center space-x-2">
               <button
-                onClick={fetchRequests}
+                type="button"
+                onClick={() => fetchRequests(false)}
                 className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
                 title="最新情報に更新"
               >
@@ -927,7 +961,7 @@ export default function DashboardPage(): React.JSX.Element {
         requestItem={selectedResponseItem}
         isOpen={!!selectedResponseItem}
         onClose={() => setSelectedResponseItem(null)}
-        onSuccess={fetchRequests}
+        onSuccess={() => fetchRequests(false)}
       />
 
       {/* ポータル画面では閲覧専用のため onOpenResponseModal を渡さない */}
@@ -935,6 +969,16 @@ export default function DashboardPage(): React.JSX.Element {
         requestItem={selectedDetailItem}
         isOpen={!!selectedDetailItem}
         onClose={() => setSelectedDetailItem(null)}
+      />
+
+      {/* 🔔 新着依頼トースト通知 */}
+      <NewRequestToast
+        requests={newIncomingRequests}
+        onSelect={(req) => {
+          setSelectedDetailItem(req);
+          setNewIncomingRequests([]);
+        }}
+        onDismiss={() => setNewIncomingRequests([])}
       />
     </div>
   );
