@@ -276,7 +276,7 @@ export function RequestResponseModal({
             }
           : undefined;
 
-      const res = await fetch(`/api/requests/${requestItem.id}`, {
+      const res = await fetch(`/api/requests/${encodeURIComponent(requestItem.id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -291,6 +291,18 @@ export function RequestResponseModal({
           orderNumber,
         }),
       });
+
+      if (!res.ok) {
+        let errText = '更新に失敗しました';
+        try {
+          const errJson = await res.json();
+          errText = errJson.error || errText;
+        } catch {
+          errText = `サーバーエラー (${res.status})`;
+        }
+        setErrorMsg(errText);
+        return;
+      }
 
       const json = await res.json();
       if (json.success) {

@@ -67,6 +67,9 @@ export default function DashboardPage(): React.JSX.Element {
     setErrorMsg('');
     try {
       const res = await fetch('/api/requests');
+      if (!res.ok) {
+        throw new Error(`サーバーレスポンスエラー (${res.status})`);
+      }
       const json = await res.json();
       if (json.success) {
         setRequests(json.data);
@@ -75,7 +78,7 @@ export default function DashboardPage(): React.JSX.Element {
       }
     } catch (err) {
       console.error('データフェッチエラー:', err);
-      setErrorMsg('通信エラーが発生しました');
+      setErrorMsg('通信エラーが発生しました。しばらく待ってから再読み込みしてください。');
     } finally {
       setLoading(false);
     }

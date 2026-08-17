@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET as getRequests, POST as createRequestApi } from '../src/app/api/requests/route';
-import { GET as getRequestByIdApi, PATCH as updateRequestApi } from '../src/app/api/requests/[id]/route';
+import { GET as getRequestByIdApi, PATCH as updateRequestApi } from '../src/app/api/requests/[...id]/route';
 import { POST as batchUpdateApi } from '../src/app/api/requests/batch/route';
 
 describe('APIルート: /api/requests のテスト', () => {

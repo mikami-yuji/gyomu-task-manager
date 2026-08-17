@@ -81,6 +81,9 @@ export default function AdminDashboardPage(): React.JSX.Element {
     setErrorMsg('');
     try {
       const res = await fetch('/api/requests');
+      if (!res.ok) {
+        throw new Error(`サーバーレスポンスエラー (${res.status})`);
+      }
       const json = await res.json();
       if (json.success) {
         setRequests(json.data);
@@ -89,7 +92,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
       }
     } catch (err) {
       console.error('データ取得エラー:', err);
-      setErrorMsg('通信エラーが発生しました');
+      setErrorMsg('通信エラーが発生しました。しばらく待ってから再読み込みしてください。');
     } finally {
       setLoading(false);
     }
@@ -98,7 +101,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
   useEffect(() => {
     fetchRequests();
     fetch('/api/settings/masters')
-      .then(res => res.json())
+      .then(res => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
       .then(json => {
         if (json.success && json.data && json.data.gyomu && json.data.gyomu.length > 0) {
           setGyomuMembers(json.data.gyomu);
