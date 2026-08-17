@@ -31,7 +31,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { BusinessRequest } from '@/types/request';
-import { STATUS_CONFIG, GYOMU_PERSONS } from '@/lib/constants';
+import { STATUS_CONFIG, SALES_PERSONS, CCR_PERSONS } from '@/lib/constants';
 import { playChimeNotification } from '@/lib/sound';
 import NewRequestToast from '@/components/NewRequestToast';
 
@@ -201,9 +201,9 @@ export default function DashboardPage(): React.JSX.Element {
     };
   }, [userTargetRequests, currentUserName, todayStr]);
 
-  // 発信者一覧の抽出 (ユニークリスト)
+  // 発信者一覧の抽出 (営業・CCRマスター ＋ 実データ発信者)
   const requesterList = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>([...SALES_PERSONS, ...CCR_PERSONS]);
     requests.forEach(r => {
       if (r.requesterName) set.add(r.requesterName);
     });
@@ -422,11 +422,6 @@ export default function DashboardPage(): React.JSX.Element {
                 className="px-2.5 py-1 bg-slate-100 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
                 <option value="">(未選択 - 全員)</option>
-                {GYOMU_PERSONS.map(name => (
-                  <option key={name} value={name}>
-                    {name} (業務課)
-                  </option>
-                ))}
                 {requesterList.map(name => (
                   <option key={name} value={name}>
                     {name}
