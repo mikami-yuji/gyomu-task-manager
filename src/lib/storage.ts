@@ -3,10 +3,11 @@ import path from 'path';
 import { BusinessRequest, CreateRequestInput, UpdateRequestInput, NotificationSetting, MemberMaster } from '@/types/request';
 import { SALES_PERSONS, CCR_PERSONS, GYOMU_PERSONS, FACTORY_MASTERS } from '@/lib/constants';
 
+const isTestEnv = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
 const DATA_DIR = path.join(process.cwd(), 'data');
-const FILE_PATH = path.join(DATA_DIR, 'requests.json');
-const NOTIF_FILE_PATH = path.join(DATA_DIR, 'notifications.json');
-const MASTER_FILE_PATH = path.join(DATA_DIR, 'masters.json');
+const FILE_PATH = path.join(DATA_DIR, isTestEnv ? 'test_requests.json' : 'requests.json');
+const NOTIF_FILE_PATH = path.join(DATA_DIR, isTestEnv ? 'test_notifications.json' : 'notifications.json');
+const MASTER_FILE_PATH = path.join(DATA_DIR, isTestEnv ? 'test_masters.json' : 'masters.json');
 
 // 初期サンプルデータ (本番・クリーン運用時は空配列)
 const INITIAL_REQUESTS: BusinessRequest[] = [];
