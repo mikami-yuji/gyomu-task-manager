@@ -102,19 +102,14 @@ export default function NewRequestPage(): React.JSX.Element {
   const [submittedId, setSubmittedId] = useState<string | null>(null);
 
   /**
-   * 入力内容に応じた件名の自動生成関数
+   * 入力内容に応じた件名の自動生成関数（他項目と重複しないスマートな商品・仕様要約）
    */
   const computeAutoTitle = (
     cat: RequestCategory,
-    custName: string,
+    _custName: string,
     prods: ProductItem[],
     est: EstimateDetails
   ): string => {
-    const prefix =
-      cat === 'delivery_check' ? '【欠品納期問合せ】' :
-      cat === 'estimate_request' ? '【見積依頼】' :
-      (cat === 'sample_request' || cat === 'work_order') ? '【仕掛手配】' : '【その他】';
-
     const firstProd = prods[0];
     const prodParts: string[] = [];
 
@@ -122,7 +117,7 @@ export default function NewRequestPage(): React.JSX.Element {
       if (firstProd.catalogNumber?.trim()) prodParts.push(firstProd.catalogNumber.trim());
       if (firstProd.weightKg?.trim()) {
         const w = firstProd.weightKg.trim();
-        prodParts.push(w.toLowerCase().includes('kg') || w.includes('ｋｇ') ? w : `${w}kg`);
+        prodParts.push(w.toLowerCase().includes('kg') || w.includes('ｋｇ') || w.toLowerCase().includes('g') || w.toLowerCase().includes('k') ? w : `${w}kg`);
       }
       if (firstProd.quantity?.trim()) {
         prodParts.push(`${firstProd.quantity.trim()}${firstProd.unit || ''}`);
@@ -132,29 +127,31 @@ export default function NewRequestPage(): React.JSX.Element {
     const prodSummary = prodParts.join('-');
 
     if (cat === 'delivery_check' || cat === 'sample_request' || cat === 'work_order') {
+      if (prodSummary && firstProd?.productName?.trim()) {
+        return `${prodSummary} ${firstProd.productName.trim()}`;
+      }
       if (prodSummary) {
-        return `${prefix}${custName ? `${custName}様 ` : ''}${prodSummary}${firstProd?.productName ? ` ${firstProd.productName}` : ''}`;
+        return prodSummary;
       }
       if (firstProd?.productName?.trim()) {
-        return `${prefix}${custName ? `${custName}様 ` : ''}${firstProd.productName.trim()}`;
+        return firstProd.productName.trim();
       }
-      return custName ? `${prefix}${custName}様` : prefix;
+      return '';
     }
 
     if (cat === 'estimate_request') {
       const specParts: string[] = [];
       if (est.capacity?.trim()) specParts.push(est.capacity.trim());
-      if (est.packageType) specParts.push(est.packageType);
-      if (est.quantity?.trim()) specParts.push(est.quantity.trim());
-      const specSummary = specParts.join(' ');
-
-      if (specSummary) {
-        return `${prefix}${custName ? `${custName}様 ` : ''}${specSummary}`;
+      if (est.packageForm && est.packageForm !== 'その他 (直接入力)') {
+        specParts.push(est.packageForm);
+      } else if (est.packageType) {
+        specParts.push(est.packageType);
       }
-      return custName ? `${prefix}${custName}様 お見積り` : prefix;
+      if (est.quantity?.trim()) specParts.push(est.quantity.trim());
+      return specParts.join(' ');
     }
 
-    return custName ? `${prefix}${custName}様 連絡事項` : prefix;
+    return '';
   };
 
   // 入力内容の変更に応じて件名をリアルタイム自動生成（手動で編集していない場合）
@@ -528,7 +525,7 @@ export default function NewRequestPage(): React.JSX.Element {
                       setTitle(e.target.value);
                       setIsTitleManuallyEdited(true);
                     }}
-                    placeholder="例: 【欠品納期問合せ】909-5kg-4000m"
+                    placeholder="例: 909-5k-4000m 雲竜無地"
                     className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all shadow-sm"
                   />
                 </div>
