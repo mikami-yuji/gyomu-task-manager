@@ -23,6 +23,8 @@ import {
   Layers,
   Building,
   UserCheck,
+  Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 import { RequestCategory, Department, ProductItem, EstimateDetails, WorkOrderDetails, FactoryMasterItem } from '@/types/request';
 import {
@@ -92,11 +94,82 @@ export default function NewRequestPage(): React.JSX.Element {
   });
 
   const [customPackageForm, setCustomPackageForm] = useState<string>('');
+  const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState<boolean>(false);
 
   const [isNotifModalOpen, setIsNotifModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+
+  /**
+   * 入力内容に応じた件名の自動生成関数
+   */
+  const computeAutoTitle = (
+    cat: RequestCategory,
+    custName: string,
+    prods: ProductItem[],
+    est: EstimateDetails
+  ): string => {
+    const prefix =
+      cat === 'delivery_check' ? '【欠品納期問合せ】' :
+      cat === 'estimate_request' ? '【見積依頼】' :
+      (cat === 'sample_request' || cat === 'work_order') ? '【仕掛手配】' : '【その他】';
+
+    const firstProd = prods[0];
+    const prodParts: string[] = [];
+
+    if (firstProd) {
+      if (firstProd.catalogNumber?.trim()) prodParts.push(firstProd.catalogNumber.trim());
+      if (firstProd.weightKg?.trim()) {
+        const w = firstProd.weightKg.trim();
+        prodParts.push(w.toLowerCase().includes('kg') || w.includes('ｋｇ') ? w : `${w}kg`);
+      }
+      if (firstProd.quantity?.trim()) {
+        prodParts.push(`${firstProd.quantity.trim()}${firstProd.unit || ''}`);
+      }
+    }
+
+    const prodSummary = prodParts.join('-');
+
+    if (cat === 'delivery_check' || cat === 'sample_request' || cat === 'work_order') {
+      if (prodSummary) {
+        return `${prefix}${custName ? `${custName}様 ` : ''}${prodSummary}${firstProd?.productName ? ` ${firstProd.productName}` : ''}`;
+      }
+      if (firstProd?.productName?.trim()) {
+        return `${prefix}${custName ? `${custName}様 ` : ''}${firstProd.productName.trim()}`;
+      }
+      return custName ? `${prefix}${custName}様` : prefix;
+    }
+
+    if (cat === 'estimate_request') {
+      const specParts: string[] = [];
+      if (est.capacity?.trim()) specParts.push(est.capacity.trim());
+      if (est.packageType) specParts.push(est.packageType);
+      if (est.quantity?.trim()) specParts.push(est.quantity.trim());
+      const specSummary = specParts.join(' ');
+
+      if (specSummary) {
+        return `${prefix}${custName ? `${custName}様 ` : ''}${specSummary}`;
+      }
+      return custName ? `${prefix}${custName}様 お見積り` : prefix;
+    }
+
+    return custName ? `${prefix}${custName}様 連絡事項` : prefix;
+  };
+
+  // 入力内容の変更に応じて件名をリアルタイム自動生成（手動で編集していない場合）
+  useEffect(() => {
+    if (!isTitleManuallyEdited) {
+      const auto = computeAutoTitle(category, customerName, products, estimateState);
+      setTitle(auto);
+    }
+  }, [category, customerName, products, estimateState, isTitleManuallyEdited]);
+
+  const handleForceRegenerateTitle = () => {
+    const auto = computeAutoTitle(category, customerName, products, estimateState);
+    setTitle(auto);
+    setIsTitleManuallyEdited(false);
+  };
 
   useEffect(() => {
     const savedUser = getSavedUserProfile();
@@ -193,12 +266,7 @@ export default function NewRequestPage(): React.JSX.Element {
 
   const handleCategoryChange = (cat: RequestCategory): void => {
     setCategory(cat);
-    if (!title || title.includes('欠品納期問合せ') || title.includes('見積依頼') || title.includes('サンプル手配') || title.includes('仕掛手配')) {
-      if (cat === 'delivery_check') setTitle('【欠品納期問合せ】');
-      else if (cat === 'estimate_request') setTitle('【見積依頼】');
-      else if (cat === 'sample_request' || cat === 'work_order') setTitle('【仕掛手配】');
-      else setTitle('');
-    }
+    setIsTitleManuallyEdited(false);
   };
 
   const handleAddProduct = (): void => {
@@ -289,8 +357,17 @@ export default function NewRequestPage(): React.JSX.Element {
   const handleReset = (): void => {
     setSubmittedId(null);
     setTitle('');
-    setRequesterName(salesMembers[0] || '');
-    setRequesterDept('sales');
+    setIsTitleManuallyEdited(false);
+    const savedUser = getSavedUserProfile();
+    if (savedUser) {
+      setRequesterName(savedUser.name);
+      if (savedUser.dept === 'sales' || savedUser.dept === 'ccr') {
+        setRequesterDept(savedUser.dept);
+      }
+    } else {
+      setRequesterName(salesMembers[0] || '');
+      setRequesterDept('sales');
+    }
     setCustomerName('');
     setCustomerCode('');
     setFactoryName('');
@@ -419,20 +496,45 @@ export default function NewRequestPage(): React.JSX.Element {
                 </div>
               </div>
 
-              {/* 件名 */}
+              {/* 件名（自動生成対応） */}
               <div>
-                <label className="block text-sm font-bold text-slate-800 mb-1">
-                  件名 <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  maxLength={100}
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  placeholder="例: 【見積依頼】500g アルミチャック袋 2000m/4000m"
-                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                    件名 <span className="text-rose-500">*</span>
+                    {!isTitleManuallyEdited && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 bg-sky-100 text-sky-700 rounded-full border border-sky-200 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-sky-500" />
+                        内容から自動生成中
+                      </span>
+                    )}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleForceRegenerateTitle}
+                    className="text-xs font-bold text-sky-600 hover:text-sky-800 flex items-center gap-1 hover:underline transition-all"
+                    title="入力された商品や得意先名から件名を再生成します"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>内容から再生成</span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    maxLength={100}
+                    value={title}
+                    onChange={e => {
+                      setTitle(e.target.value);
+                      setIsTitleManuallyEdited(true);
+                    }}
+                    placeholder="例: 【欠品納期問合せ】909-5kg-4000m"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all shadow-sm"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  ※ 得意先名や商品明細（カタログ№・容量・数量等）を入力すると、件名が自動で分かりやすく組み立てられます（直接手動編集も可能です）。
+                </p>
               </div>
 
               {/* 依頼者情報（発信部署 ＆ 営業・CCR動的担当者ドロップダウン） */}
