@@ -50,7 +50,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
     secure: false,
     user: '',
     pass: '',
-    fromEmail: 'mikami@asahipac.co.jp',
+    fromEmail: 'gyomu-desk@asahipac.co.jp',
     fromName: '業務課タスク管理システム',
     useAuth: false,
     notifyOnCreate: true,
@@ -646,12 +646,12 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
                         useAuth: false,
                         user: '',
                         pass: '',
-                        fromEmail: 'mikami@asahipac.co.jp',
+                        fromEmail: 'gyomu-desk@asahipac.co.jp',
                       })
                     }
                     className="px-3 py-1.5 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 rounded-xl text-xs font-black text-emerald-800 shadow-sm transition-all"
                   >
-                    ⭐ アサヒパック社内設定 (mail.asahipac.co.jp / ポート25 / 認証なし)
+                    社内SMTPリレー (mail.asahipac.co.jp / ポート25 / 認証なし)
                   </button>
                   <button
                     type="button"

@@ -282,7 +282,7 @@ const INITIAL_SMTP_SETTINGS = {
   secure: false,
   user: '',
   pass: '',
-  fromEmail: 'mikami@asahipac.co.jp',
+  fromEmail: 'gyomu-desk@asahipac.co.jp',
   fromName: '業務課タスク管理システム',
   useAuth: false,
   notifyOnCreate: true,
