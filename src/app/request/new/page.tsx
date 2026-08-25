@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { NotificationModal } from '@/components/NotificationModal';
+import { getSavedUserProfile } from '@/lib/user';
 import {
   Send,
   ArrowLeft,
@@ -98,6 +99,14 @@ export default function NewRequestPage(): React.JSX.Element {
   const [submittedId, setSubmittedId] = useState<string | null>(null);
 
   useEffect(() => {
+    const savedUser = getSavedUserProfile();
+    if (savedUser) {
+      setRequesterName(savedUser.name);
+      if (savedUser.dept === 'sales' || savedUser.dept === 'ccr') {
+        setRequesterDept(savedUser.dept);
+      }
+    }
+
     // マスターデータの非同期フェッチ
     fetch('/api/settings/masters')
       .then(res => res.json())
@@ -107,12 +116,18 @@ export default function NewRequestPage(): React.JSX.Element {
           if (json.data.ccr && json.data.ccr.length > 0) setCcrMembers(json.data.ccr);
           if (json.data.gyomu && json.data.gyomu.length > 0) setGyomuMembers(json.data.gyomu);
           if (json.data.factories && json.data.factories.length > 0) setFactoryList(json.data.factories);
-          setRequesterName(json.data.sales?.[0] || SALES_PERSONS[0]);
+          
+          // ログインユーザーが未設定の場合のみ初期値セット
+          if (!savedUser) {
+            setRequesterName(json.data.sales?.[0] || SALES_PERSONS[0]);
+          }
         }
       })
       .catch(err => {
         console.error('マスター取得失敗:', err);
-        setRequesterName(SALES_PERSONS[0]);
+        if (!savedUser) {
+          setRequesterName(SALES_PERSONS[0]);
+        }
       });
   }, []);
 

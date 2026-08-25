@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { BusinessRequest, RequestStatus, EstimateResponse, EstimateLotItem, FactoryMasterItem } from '@/types/request';
 import { GYOMU_PERSONS, FACTORY_MASTERS, STATUS_CONFIG } from '@/lib/constants';
+import { getSavedUserProfile } from '@/lib/user';
 
 type RequestResponseModalProps = {
   requestItem: BusinessRequest | null;
@@ -79,10 +80,11 @@ export function RequestResponseModal({
       const st = requestItem.status === ('completed' as any) ? 'answered' : (requestItem.status || 'in_progress');
       setStatus(st);
 
-      // 初期値として依頼時に指定された工場・担当者があればそのまま反映
+      const savedUser = getSavedUserProfile();
+      // 初期値として依頼時に指定された工場・担当者があればそのまま反映。なければログイン中の業務課担当者
       const initFactoryName = requestItem.estimateResponse?.factoryName || requestItem.factoryName || '';
       const initFactoryCode = requestItem.estimateResponse?.factoryCode || requestItem.factoryCode || '';
-      const initAssignee = requestItem.assigneeName || gyomuMembers[0] || GYOMU_PERSONS[0];
+      const initAssignee = requestItem.assigneeName || (savedUser?.dept === 'gyomu' ? savedUser.name : gyomuMembers[0] || GYOMU_PERSONS[0]);
 
       setSelectedFactoryName(initFactoryName);
       setFactoryCode(initFactoryCode);

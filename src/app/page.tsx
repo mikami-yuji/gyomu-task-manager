@@ -6,6 +6,7 @@ import { NotificationModal } from '@/components/NotificationModal';
 import { RequestResponseModal } from '@/components/RequestResponseModal';
 import { RequestDetailModal } from '@/components/RequestDetailModal';
 import { VoucherPreview } from '@/components/VoucherPreview';
+import { getSavedUserProfile } from '@/lib/user';
 import {
   Search,
   Filter,
@@ -64,12 +65,21 @@ export default function DashboardPage(): React.JSX.Element {
   const [newIncomingRequests, setNewIncomingRequests] = useState<BusinessRequest[]>([]);
   const prevRequestIdsRef = React.useRef<Set<string> | null>(null);
 
-  // 初回ユーザー名復元
+  // 初回ユーザー名復元およびイベント連動
   useEffect(() => {
-    const savedName = localStorage.getItem('gyomu_user_name');
-    if (savedName) {
-      setCurrentUserName(savedName);
-    }
+    const syncUser = () => {
+      const saved = getSavedUserProfile();
+      if (saved) {
+        setCurrentUserName(saved.name);
+      } else {
+        const legacyName = localStorage.getItem('gyomu_user_name');
+        if (legacyName) setCurrentUserName(legacyName);
+      }
+    };
+
+    syncUser();
+    window.addEventListener('gyomu_user_changed', syncUser);
+    return () => window.removeEventListener('gyomu_user_changed', syncUser);
   }, []);
 
   const handleUserChange = (name: string): void => {
