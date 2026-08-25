@@ -371,10 +371,7 @@ export function VoucherPreview({
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-black tracking-wider text-slate-900">業務課 依頼・回答伝票</h1>
-                <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-700 font-bold border border-slate-300 rounded">
-                  {categoryLabel}
-                </span>
+                <h1 className="text-xl sm:text-2xl font-black tracking-wider text-slate-900">{categoryLabel}</h1>
 
                 {/* 期限超過・至急アラートバッジ（パルス点滅） */}
                 {deadlineAlert && (
