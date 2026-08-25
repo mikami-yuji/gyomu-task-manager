@@ -10,6 +10,7 @@ type RequestDetailModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onOpenResponseModal?: (item: BusinessRequest) => void;
+  onRequestUpdated?: (updated: BusinessRequest) => void;
 };
 
 /**
@@ -20,6 +21,7 @@ export function RequestDetailModal({
   isOpen,
   onClose,
   onOpenResponseModal,
+  onRequestUpdated,
 }: RequestDetailModalProps): React.JSX.Element | null {
   if (!isOpen || !requestItem) return null;
 
@@ -30,7 +32,7 @@ export function RequestDetailModal({
   const categoryLabel =
     requestItem.category === 'delivery_check' ? '欠品/納期問合せ' :
     requestItem.category === 'estimate_request' ? '見積依頼' :
-    requestItem.category === 'sample_request' ? 'サンプル手配' : 'その他依頼';
+    (requestItem.category === 'sample_request' || requestItem.category === 'work_order') ? '仕掛手配' : 'その他依頼';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in modal-container">
@@ -76,6 +78,7 @@ export function RequestDetailModal({
             requestItem={requestItem}
             isModal={true}
             onOpenResponseModal={onOpenResponseModal}
+            onRequestUpdated={onRequestUpdated}
           />
         </div>
 

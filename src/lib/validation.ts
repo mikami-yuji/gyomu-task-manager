@@ -37,6 +37,20 @@ const estimateDetailsSchema = z.object({
   deoxidizer: z.string().optional(),
 });
 
+const workOrderDetailsSchema = z.object({
+  orderDate: z.string().optional(),
+  desiredDeliveryDate: z.string().optional(),
+  customerName: z.string().optional(),
+  customerCode: z.string().optional(),
+  productNumberWeight: z.string().optional(),
+  productName: z.string().optional(),
+  finishForm: z.string().optional(),
+  quantity: z.string().optional(),
+  salesPersonName: z.string().optional(),
+  branch: z.string().optional(),
+  supplierName: z.string().optional(),
+});
+
 const estimateLotItemSchema = z.object({
   id: z.string(),
   lotName: z.string(),
@@ -58,7 +72,7 @@ const estimateResponseSchema = z.object({
 });
 
 const createRequestSchema = z.object({
-  category: z.enum(['delivery_check', 'estimate_request', 'sample_request', 'other']),
+  category: z.enum(['delivery_check', 'estimate_request', 'sample_request', 'work_order', 'other']),
   title: z.string().min(1, '件名は必須です').max(100, '件名は100文字以内で入力してください'),
   requesterName: z.string().min(1, '依頼者名は必須です').max(50, '依頼者名は50文字以内で入力してください'),
   requesterDept: z.enum(['sales', 'ccr']),
@@ -72,6 +86,11 @@ const createRequestSchema = z.object({
   details: z.string().max(1000).default(''),
   products: z.array(productItemSchema).optional(),
   estimateDetails: estimateDetailsSchema.optional(),
+  workOrderDetails: workOrderDetailsSchema.optional(),
+  approvalStatus: z.enum(['pending', 'approved', 'rejected']).optional(),
+  approverName: z.string().max(50).optional(),
+  approvedAt: z.string().optional(),
+  approvalComment: z.string().max(500).optional(),
   internalNote: z.string().max(1000).optional(),
 });
 
@@ -83,8 +102,13 @@ const updateRequestSchema = z.object({
   scheduledPurchaseDate: z.string().optional(),
   incomingQuantity: z.string().optional(),
   estimateResponse: estimateResponseSchema.optional(),
+  workOrderDetails: workOrderDetailsSchema.optional(),
   responseContent: z.string().max(1000).optional(),
   orderNumber: z.string().max(50).optional(),
+  approvalStatus: z.enum(['pending', 'approved', 'rejected']).optional(),
+  approverName: z.string().max(50).optional(),
+  approvedAt: z.string().optional(),
+  approvalComment: z.string().max(500).optional(),
   internalNote: z.string().max(1000).optional(),
   desiredDeliveryDate: z.string().optional(),
   details: z.string().max(1000).optional(),
@@ -128,6 +152,25 @@ export function validateAndSanitizeCreateInput(rawData: unknown): CreateRequestI
           deoxidizer: parsed.estimateDetails.deoxidizer ? sanitizeInput(parsed.estimateDetails.deoxidizer) : undefined,
         }
       : undefined,
+    workOrderDetails: parsed.workOrderDetails
+      ? {
+          orderDate: parsed.workOrderDetails.orderDate ? sanitizeInput(parsed.workOrderDetails.orderDate) : undefined,
+          desiredDeliveryDate: parsed.workOrderDetails.desiredDeliveryDate ? sanitizeInput(parsed.workOrderDetails.desiredDeliveryDate) : undefined,
+          customerName: parsed.workOrderDetails.customerName ? sanitizeInput(parsed.workOrderDetails.customerName) : undefined,
+          customerCode: parsed.workOrderDetails.customerCode ? sanitizeInput(parsed.workOrderDetails.customerCode) : undefined,
+          productNumberWeight: parsed.workOrderDetails.productNumberWeight ? sanitizeInput(parsed.workOrderDetails.productNumberWeight) : undefined,
+          productName: parsed.workOrderDetails.productName ? sanitizeInput(parsed.workOrderDetails.productName) : undefined,
+          finishForm: parsed.workOrderDetails.finishForm ? sanitizeInput(parsed.workOrderDetails.finishForm) : undefined,
+          quantity: parsed.workOrderDetails.quantity ? sanitizeInput(parsed.workOrderDetails.quantity) : undefined,
+          salesPersonName: parsed.workOrderDetails.salesPersonName ? sanitizeInput(parsed.workOrderDetails.salesPersonName) : undefined,
+          branch: parsed.workOrderDetails.branch ? sanitizeInput(parsed.workOrderDetails.branch) : undefined,
+          supplierName: parsed.workOrderDetails.supplierName ? sanitizeInput(parsed.workOrderDetails.supplierName) : undefined,
+        }
+      : undefined,
+    approvalStatus: parsed.approvalStatus,
+    approverName: parsed.approverName ? sanitizeInput(parsed.approverName) : undefined,
+    approvedAt: parsed.approvedAt,
+    approvalComment: parsed.approvalComment ? sanitizeInput(parsed.approvalComment) : undefined,
   };
 }
 
@@ -161,6 +204,25 @@ export function validateAndSanitizeUpdateInput(rawData: unknown): UpdateRequestI
             : undefined,
         }
       : undefined,
+    workOrderDetails: parsed.workOrderDetails
+      ? {
+          orderDate: parsed.workOrderDetails.orderDate ? sanitizeInput(parsed.workOrderDetails.orderDate) : undefined,
+          desiredDeliveryDate: parsed.workOrderDetails.desiredDeliveryDate ? sanitizeInput(parsed.workOrderDetails.desiredDeliveryDate) : undefined,
+          customerName: parsed.workOrderDetails.customerName ? sanitizeInput(parsed.workOrderDetails.customerName) : undefined,
+          customerCode: parsed.workOrderDetails.customerCode ? sanitizeInput(parsed.workOrderDetails.customerCode) : undefined,
+          productNumberWeight: parsed.workOrderDetails.productNumberWeight ? sanitizeInput(parsed.workOrderDetails.productNumberWeight) : undefined,
+          productName: parsed.workOrderDetails.productName ? sanitizeInput(parsed.workOrderDetails.productName) : undefined,
+          finishForm: parsed.workOrderDetails.finishForm ? sanitizeInput(parsed.workOrderDetails.finishForm) : undefined,
+          quantity: parsed.workOrderDetails.quantity ? sanitizeInput(parsed.workOrderDetails.quantity) : undefined,
+          salesPersonName: parsed.workOrderDetails.salesPersonName ? sanitizeInput(parsed.workOrderDetails.salesPersonName) : undefined,
+          branch: parsed.workOrderDetails.branch ? sanitizeInput(parsed.workOrderDetails.branch) : undefined,
+          supplierName: parsed.workOrderDetails.supplierName ? sanitizeInput(parsed.workOrderDetails.supplierName) : undefined,
+        }
+      : undefined,
+    approvalStatus: parsed.approvalStatus,
+    approverName: parsed.approverName ? sanitizeInput(parsed.approverName) : undefined,
+    approvedAt: parsed.approvedAt,
+    approvalComment: parsed.approvalComment ? sanitizeInput(parsed.approvalComment) : undefined,
     responseContent: parsed.responseContent ? sanitizeInput(parsed.responseContent) : undefined,
     orderNumber: parsed.orderNumber ? sanitizeInput(parsed.orderNumber) : undefined,
     internalNote: parsed.internalNote ? sanitizeInput(parsed.internalNote) : undefined,

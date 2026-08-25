@@ -21,8 +21,8 @@ export default function NewRequestToast({ requests, onSelect, onDismiss }: Props
       ? '納期確認'
       : latest.category === 'estimate_request'
       ? '見積依頼'
-      : latest.category === 'sample_request'
-      ? 'サンプル手配'
+      : (latest.category === 'sample_request' || latest.category === 'work_order')
+      ? '仕掛手配'
       : 'その他';
 
   return (

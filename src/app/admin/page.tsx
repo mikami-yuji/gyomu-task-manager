@@ -253,7 +253,13 @@ export default function AdminDashboardPage(): React.JSX.Element {
         if (selectedRequester !== 'all' && item.requesterName !== selectedRequester) return false;
 
         // カテゴリ・ステータス
-        if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
+        if (selectedCategory !== 'all') {
+          if (selectedCategory === 'sample_request') {
+            if (item.category !== 'sample_request' && item.category !== 'work_order') return false;
+          } else if (item.category !== selectedCategory) {
+            return false;
+          }
+        }
         if (selectedStatus !== 'all' && item.status !== selectedStatus) return false;
 
         // 検索ワード
@@ -353,6 +359,13 @@ export default function AdminDashboardPage(): React.JSX.Element {
         isImminent: false,
         label: desiredDate,
       };
+    }
+  };
+
+  const handleRequestUpdated = (updated: BusinessRequest): void => {
+    setRequests(prev => prev.map(r => (r.id === updated.id ? updated : r)));
+    if (selectedDetailItem && selectedDetailItem.id === updated.id) {
+      setSelectedDetailItem(updated);
     }
   };
 
@@ -697,7 +710,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
                 { key: 'all', label: 'すべて', count: assigneeFilteredRequests.length },
                 { key: 'delivery_check', label: '欠品/納期問合せ', count: assigneeFilteredRequests.filter(r => r.category === 'delivery_check').length },
                 { key: 'estimate_request', label: '見積依頼', count: assigneeFilteredRequests.filter(r => r.category === 'estimate_request').length },
-                { key: 'sample_request', label: 'サンプル手配', count: assigneeFilteredRequests.filter(r => r.category === 'sample_request').length },
+                { key: 'sample_request', label: '仕掛手配', count: assigneeFilteredRequests.filter(r => r.category === 'sample_request' || r.category === 'work_order').length },
                 { key: 'other', label: 'その他', count: assigneeFilteredRequests.filter(r => r.category === 'other').length },
               ].map(cat => (
                 <button
@@ -895,7 +908,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
                 const categoryBadge =
                   req.category === 'delivery_check' ? 'bg-sky-100 text-sky-800' :
                   req.category === 'estimate_request' ? 'bg-indigo-100 text-indigo-800' :
-                  req.category === 'sample_request' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800';
+                  (req.category === 'sample_request' || req.category === 'work_order') ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800';
 
                 const stKey = (req.status as string) === 'completed' ? 'answered' : req.status;
                 const stConf = STATUS_CONFIG[stKey] || STATUS_CONFIG.pending;
@@ -912,13 +925,22 @@ export default function AdminDashboardPage(): React.JSX.Element {
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1.5 flex-wrap">
                         <span className="font-mono font-black text-sky-900">{req.id}</span>
                         <span className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${categoryBadge}`}>
                           {req.category === 'delivery_check' ? '納期' :
                            req.category === 'estimate_request' ? '見積' :
-                           req.category === 'sample_request' ? 'サンプル' : '他'}
+                           (req.category === 'sample_request' || req.category === 'work_order') ? '仕掛' : '他'}
                         </span>
+                        {(req.category === 'sample_request' || req.category === 'work_order') && (
+                          <span className={`px-1.5 py-0.5 rounded font-black text-[9px] border ${
+                            req.approvalStatus === 'approved'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                              : 'bg-rose-50 text-rose-700 border-rose-300 animate-pulse'
+                          }`}>
+                            {req.approvalStatus === 'approved' ? '承認済' : '承認待ち'}
+                          </span>
+                        )}
                       </div>
 
                       <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border flex items-center gap-1 ${stConf.badgeStyle}`}>
@@ -959,6 +981,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
                 requestItem={filteredRequests[selectedSplitIndex] || null}
                 currentIndex={selectedSplitIndex}
                 totalCount={filteredRequests.length}
+                onRequestUpdated={handleRequestUpdated}
                 onOpenResponseModal={item => setSelectedResponseItem(item)}
                 onNavigatePrev={() => setSelectedSplitIndex(prev => Math.max(0, prev - 1))}
                 onNavigateNext={() => setSelectedSplitIndex(prev => Math.min(filteredRequests.length - 1, prev + 1))}
@@ -983,7 +1006,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
                   <th className="p-3">依頼番号</th>
                   <th className="p-3">業務担当者</th>
                   <th className="p-3">発信者</th>
-                  <th className="p-3">カテゴリ</th>
+                  <th className="p-3">カテゴリ / 承認</th>
                   <th className="p-3">件名 / 明細</th>
                   <th className="p-3">工場コード</th>
                   <th className="p-3">工場名</th>
@@ -1043,10 +1066,22 @@ export default function AdminDashboardPage(): React.JSX.Element {
 
                       {/* カテゴリ */}
                       <td className="p-3 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-slate-100 text-slate-700">
-                          {req.category === 'delivery_check' ? '欠品問合せ' :
-                           req.category === 'estimate_request' ? '見積依頼' : 'その他'}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-slate-100 text-slate-700 w-fit">
+                            {req.category === 'delivery_check' ? '欠品問合せ' :
+                             req.category === 'estimate_request' ? '見積依頼' :
+                             (req.category === 'sample_request' || req.category === 'work_order') ? '仕掛手配' : 'その他'}
+                          </span>
+                          {(req.category === 'sample_request' || req.category === 'work_order') && (
+                            <span className={`px-1.5 py-0.5 rounded font-black text-[9px] border w-fit ${
+                              req.approvalStatus === 'approved'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : 'bg-rose-50 text-rose-700 border-rose-300'
+                            }`}>
+                              {req.approvalStatus === 'approved' ? '上長承認済' : '上長承認待ち'}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* 件名 */}
@@ -1125,6 +1160,7 @@ export default function AdminDashboardPage(): React.JSX.Element {
         isOpen={!!selectedDetailItem}
         onClose={() => setSelectedDetailItem(null)}
         onOpenResponseModal={item => setSelectedResponseItem(item)}
+        onRequestUpdated={handleRequestUpdated}
       />
 
       {/* 🔔 新着依頼トースト通知 */}

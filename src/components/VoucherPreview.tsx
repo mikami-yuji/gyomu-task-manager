@@ -18,12 +18,17 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
+  UserCheck,
+  ShieldCheck,
+  XCircle,
 } from 'lucide-react';
 import { BusinessRequest } from '@/types/request';
+import { SALES_PERSONS, CCR_PERSONS, GYOMU_PERSONS } from '@/lib/constants';
 
 export type VoucherPreviewProps = {
   requestItem: BusinessRequest | null;
   onOpenResponseModal?: (item: BusinessRequest) => void;
+  onRequestUpdated?: (updated: BusinessRequest) => void;
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
   hasPrev?: boolean;
@@ -40,6 +45,7 @@ export type VoucherPreviewProps = {
 export function VoucherPreview({
   requestItem,
   onOpenResponseModal,
+  onRequestUpdated,
   onNavigatePrev,
   onNavigateNext,
   hasPrev = false,
@@ -48,6 +54,10 @@ export function VoucherPreview({
   totalCount,
   isModal = false,
 }: VoucherPreviewProps): React.JSX.Element {
+  const [isApproving, setIsApproving] = useState(false);
+  const [selectedApprover, setSelectedApprover] = useState('');
+  const [approvalError, setApprovalError] = useState('');
+
   if (!requestItem) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-300">
@@ -61,7 +71,7 @@ export function VoucherPreview({
   const categoryLabel =
     requestItem.category === 'delivery_check' ? '欠品/納期問合せ' :
     requestItem.category === 'estimate_request' ? '見積依頼' :
-    requestItem.category === 'sample_request' ? 'サンプル手配' : 'その他依頼';
+    (requestItem.category === 'sample_request' || requestItem.category === 'work_order') ? '仕掛手配' : 'その他依頼';
 
   const isAnswered = requestItem.status === 'answered' || (requestItem.status as string) === 'completed';
   const isInProgress = requestItem.status === 'in_progress';
@@ -94,6 +104,11 @@ export function VoucherPreview({
     }
   }
 
+  const isWorkOrder = requestItem.category === 'sample_request' || requestItem.category === 'work_order';
+  const isApproved = requestItem.approvalStatus === 'approved';
+  const isRejected = requestItem.approvalStatus === 'rejected';
+  const isPendingApproval = isWorkOrder && !isApproved && !isRejected;
+
   const est = requestItem.estimateDetails;
   const res = requestItem.estimateResponse;
   const requestedPackageType = est?.packageType || '単袋';
@@ -103,11 +118,80 @@ export function VoucherPreview({
     window.print();
   };
 
+  // 上長承認実行
+  const handleApprove = async (approver: string): Promise<void> => {
+    if (!approver.trim()) {
+      setApprovalError('承認者名を選択または入力してください');
+      return;
+    }
+    setIsApproving(true);
+    setApprovalError('');
+    try {
+      const nowIso = new Date().toISOString();
+      const res = await fetch(`/api/requests/${requestItem.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          approvalStatus: 'approved',
+          approverName: approver.trim(),
+          approvedAt: nowIso,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        if (onRequestUpdated) onRequestUpdated(json.data);
+      } else {
+        setApprovalError(json.error || '承認に失敗しました');
+      }
+    } catch (err) {
+      console.error('上長承認エラー:', err);
+      setApprovalError('通信エラーが発生しました');
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  // 承認差戻し
+  const handleReject = async (): Promise<void> => {
+    if (!confirm('この仕掛手配を「差戻し（未承認）」に戻しますか？')) return;
+    setIsApproving(true);
+    setApprovalError('');
+    try {
+      const res = await fetch(`/api/requests/${requestItem.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          approvalStatus: 'pending',
+          approverName: undefined,
+          approvedAt: undefined,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        if (onRequestUpdated) onRequestUpdated(json.data);
+      } else {
+        setApprovalError(json.error || '解除に失敗しました');
+      }
+    } catch (err) {
+      console.error('上長承認解除エラー:', err);
+      setApprovalError('通信エラーが発生しました');
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
   const formattedCreatedAt = new Date(requestItem.createdAt).toLocaleDateString('ja-JP', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   });
+
+  const formattedApprovedDate = requestItem.approvedAt
+    ? new Date(requestItem.approvedAt).toLocaleDateString('ja-JP', {
+        month: 'numeric',
+        day: 'numeric',
+      })
+    : '';
 
   return (
     <div className={`bg-white rounded-2xl ${isModal ? '' : 'shadow-sm border border-slate-200'} overflow-hidden flex flex-col printable-voucher`}>
@@ -174,6 +258,89 @@ export function VoucherPreview({
         </div>
       )}
 
+      {/* 上長認証システム（仕掛手配 専用アクションバー / 画面専用） */}
+      {isWorkOrder && (
+        <div className="px-5 py-3 bg-emerald-50 border-b border-emerald-200 flex flex-wrap items-center justify-between gap-3 no-print">
+          <div className="flex items-center space-x-2">
+            <div className={`p-1.5 rounded-lg ${isApproved ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-emerald-950">【上長認証ステータス】</span>
+                {isApproved ? (
+                  <span className="px-2 py-0.5 bg-emerald-600 text-white rounded text-[11px] font-black tracking-wider flex items-center gap-1">
+                    <UserCheck className="w-3 h-3" />
+                    承認済み (承認者: {requestItem.approverName || '上長'})
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[11px] font-black tracking-wider animate-pulse">
+                    ⚠️ 上長未承認（承認待ち）
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-emerald-800 mt-0.5">
+                {isApproved
+                  ? `承認日時: ${new Date(requestItem.approvedAt || '').toLocaleString('ja-JP')}`
+                  : '仕掛手配の実行には上長の認証（承認印）が必要です。'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {approvalError && (
+              <span className="text-xs font-bold text-rose-600 mr-1">{approvalError}</span>
+            )}
+
+            {!isApproved ? (
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={selectedApprover}
+                  onChange={e => setSelectedApprover(e.target.value)}
+                  className="px-2 py-1.5 bg-white border border-emerald-400 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">-- 上長を選択 --</option>
+                  <optgroup label="営業上長・担当">
+                    {SALES_PERSONS.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="CCR上長・担当">
+                    {CCR_PERSONS.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="業務課">
+                    {GYOMU_PERSONS.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </optgroup>
+                </select>
+                <button
+                  type="button"
+                  disabled={isApproving || !selectedApprover}
+                  onClick={() => handleApprove(selectedApprover)}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-lg text-xs font-black shadow transition-colors flex items-center gap-1"
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  {isApproving ? '認証中...' : '上長承認する (認証)'}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isApproving}
+                onClick={handleReject}
+                className="px-2.5 py-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors"
+                title="承認を取り消して未承認に戻します"
+              >
+                承認を取り消す
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 帳票本体エリア */}
       <div className="p-6 sm:p-7 space-y-5 bg-white text-slate-900 overflow-y-auto print:overflow-visible print:p-0">
         {/* 帳票ヘッダー (タイトル・発行日・認印エリア) */}
@@ -216,6 +383,29 @@ export function VoucherPreview({
                 <span className="text-[9px] tracking-tighter">ステータス</span>
                 <span className="text-xs font-black">{statusStampText}</span>
               </div>
+
+              {/* 上長承認印 (仕掛手配または承認済み時) */}
+              {(isWorkOrder || requestItem.approvalStatus) && (
+                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 flex flex-col items-center justify-center font-bold rotate-[-3deg] shadow-sm shrink-0 ${
+                  isApproved
+                    ? 'border-rose-600 bg-rose-50/70 text-rose-700'
+                    : isRejected
+                    ? 'border-slate-500 bg-slate-50 text-slate-600'
+                    : 'border-dashed border-rose-400 bg-rose-50/30 text-rose-500'
+                }`}>
+                  <span className="text-[8px] sm:text-[9px] tracking-tighter border-b border-rose-300 w-4/5 text-center pb-0.5">
+                    {isApproved ? '上長承認' : '上長認証'}
+                  </span>
+                  <span className="text-[10px] sm:text-xs font-black px-1 truncate max-w-full">
+                    {isApproved ? (requestItem.approverName || '承認') : '承認待ち'}
+                  </span>
+                  {isApproved && formattedApprovedDate && (
+                    <span className="text-[8px] font-mono leading-none pt-0.5 text-rose-600">
+                      {formattedApprovedDate}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* 依頼者印 */}
               <div className="w-14 h-14 sm:w-16 sm:h-16 border border-slate-400 rounded bg-slate-50 flex flex-col text-[9px] sm:text-[10px] text-center overflow-hidden shrink-0">
@@ -325,12 +515,19 @@ export function VoucherPreview({
           </div>
         )}
 
-        {/* 欠品商品明細テーブル */}
-        {requestItem.category === 'delivery_check' && requestItem.products && requestItem.products.length > 0 && (
+        {/* 商品明細テーブル（欠品納期問合せ ＆ 仕掛手配共通） */}
+        {(requestItem.category === 'delivery_check' || isWorkOrder) && requestItem.products && requestItem.products.length > 0 && (
           <div className="border border-slate-300 rounded-lg overflow-hidden">
-            <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-300 text-xs font-bold text-slate-800 flex items-center gap-1.5">
-              <Box className="w-3.5 h-3.5 text-sky-700 no-print" />
-              <span>【欠品・納期問合せ 商品明細】</span>
+            <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-300 text-xs font-bold text-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Box className="w-3.5 h-3.5 text-sky-700 no-print" />
+                <span>{requestItem.category === 'delivery_check' ? '【欠品・納期問合せ 商品明細】' : '【仕掛手配 商品明細】'}</span>
+              </div>
+              {isWorkOrder && (
+                <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${isApproved ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                  {isApproved ? `上長承認済 (${requestItem.approverName || '済'})` : '上長承認待ち'}
+                </span>
+              )}
             </div>
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-300">

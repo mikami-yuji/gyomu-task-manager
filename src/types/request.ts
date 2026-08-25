@@ -1,7 +1,7 @@
 // 型定義はsrc/typesに集約（user_globalルール25）
 
 /** 依頼カテゴリ */
-export type RequestCategory = 'delivery_check' | 'estimate_request' | 'sample_request' | 'other';
+export type RequestCategory = 'delivery_check' | 'estimate_request' | 'sample_request' | 'work_order' | 'other';
 
 /** 依頼ステータス (完了を廃止し「回答済み」に一本化) */
 export type RequestStatus = 'pending' | 'in_progress' | 'answered' | 'on_hold';
@@ -26,6 +26,21 @@ export type ProductItem = {
   productName: string;   // 商品名
   quantity: string;      // 必要数量
   unit: string;          // 単位 (枚 / m)
+};
+
+/** 商品仕掛依頼書（仕掛手配）専用 入力詳細 */
+export type WorkOrderDetails = {
+  orderDate?: string;          // 依頼日 (YYYY-MM-DD)
+  desiredDeliveryDate?: string;// 希望納期 (YYYY-MM-DD)
+  customerName?: string;       // 得意先名
+  customerCode?: string;       // 得意先コード
+  productNumberWeight?: string;// 商品番号・キロ数 (例: "12345 — 20kg")
+  productName?: string;        // 商品名
+  finishForm?: string;         // 仕上げ形態 (例: 単袋、ロール、三方シール等)
+  quantity?: string;           // 数量
+  salesPersonName?: string;    // 発注依頼営業者名
+  branch?: '大阪本社' | '東京支店' | string; // 拠点（大阪本社・東京支店）
+  supplierName?: string;       // 発注先
 };
 
 /** 見積依頼専用 入力詳細 */
@@ -64,6 +79,9 @@ export type EstimateResponse = {
   factoryCode?: string;      // 工場コード
 };
 
+/** 承認ステータス (上長認証用: 未承認/承認待ち・承認済・差戻し) */
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
 /** 業務課依頼データモデル */
 export type BusinessRequest = {
   id: string; // 依頼番号 (例: GYM-20260803-001)
@@ -76,8 +94,9 @@ export type BusinessRequest = {
   customerCode?: string; // 得意先CD
   desiredDeliveryDate: string; // 希望納期 YYYY-MM-DD
   details: string;
-  products?: ProductItem[]; // 欠品商品明細リスト
+  products?: ProductItem[]; // 商品明細リスト（欠品納期問合せ・仕掛手配共通）
   estimateDetails?: EstimateDetails; // 見積依頼用詳細項目
+  workOrderDetails?: WorkOrderDetails; // 商品仕掛依頼書用詳細項目
   attachments: AttachmentFile[];
   status: RequestStatus;
   assigneeName?: string; // 業務課/仕入担当者
@@ -88,7 +107,11 @@ export type BusinessRequest = {
   estimateResponse?: EstimateResponse; // 見積回答（業務記入）
   responseContent?: string; // 業務課・仕入Gからの回答コメント
   orderNumber?: string; // 受注番号
-  internalNote?: string; // 社内用付箋メモ（相手には通知されない課内・個人用の走り書き）
+  internalNote?: string; // 社内用付箋メモ
+  approvalStatus?: ApprovalStatus; // 上長承認ステータス
+  approverName?: string; // 承認した上長名
+  approvedAt?: string; // 承認日時 ISO文字列
+  approvalComment?: string; // 承認・差戻しコメント
   completedAt?: string; // 完了日時 ISO文字列
   createdAt: string; // 作成日時 ISO文字列
   updatedAt: string; // 更新日時 ISO文字列
@@ -110,6 +133,11 @@ export type CreateRequestInput = {
   factoryCode?: string;
   products?: ProductItem[];
   estimateDetails?: EstimateDetails;
+  workOrderDetails?: WorkOrderDetails;
+  approvalStatus?: ApprovalStatus;
+  approverName?: string;
+  approvedAt?: string;
+  approvalComment?: string;
   attachments?: AttachmentFile[];
   internalNote?: string;
 };
@@ -123,8 +151,13 @@ export type UpdateRequestInput = {
   scheduledPurchaseDate?: string;
   incomingQuantity?: string;
   estimateResponse?: EstimateResponse;
+  workOrderDetails?: WorkOrderDetails;
   responseContent?: string;
   orderNumber?: string;
+  approvalStatus?: ApprovalStatus;
+  approverName?: string;
+  approvedAt?: string;
+  approvalComment?: string;
   internalNote?: string;
   desiredDeliveryDate?: string;
   details?: string;

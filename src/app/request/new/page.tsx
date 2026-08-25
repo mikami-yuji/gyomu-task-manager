@@ -22,7 +22,7 @@ import {
   Building,
   UserCheck,
 } from 'lucide-react';
-import { RequestCategory, Department, ProductItem, EstimateDetails, FactoryMasterItem } from '@/types/request';
+import { RequestCategory, Department, ProductItem, EstimateDetails, WorkOrderDetails, FactoryMasterItem } from '@/types/request';
 import {
   SALES_PERSONS,
   CCR_PERSONS,
@@ -72,6 +72,21 @@ export default function NewRequestPage(): React.JSX.Element {
     material: '',
     colorCount: '',
     deoxidizer: '無',
+  });
+
+  // 仕掛手配（商品仕掛依頼書）専用フォーム状態
+  const [workOrderState, setWorkOrderState] = useState<WorkOrderDetails>({
+    orderDate: new Date().toISOString().split('T')[0],
+    desiredDeliveryDate: '',
+    customerName: '',
+    customerCode: '',
+    productNumberWeight: '',
+    productName: '',
+    finishForm: '',
+    quantity: '',
+    salesPersonName: '',
+    branch: '大阪本社',
+    supplierName: '',
   });
 
   const [customPackageForm, setCustomPackageForm] = useState<string>('');
@@ -161,10 +176,10 @@ export default function NewRequestPage(): React.JSX.Element {
 
   const handleCategoryChange = (cat: RequestCategory): void => {
     setCategory(cat);
-    if (!title || title.includes('欠品納期問合せ') || title.includes('見積依頼') || title.includes('サンプル手配')) {
+    if (!title || title.includes('欠品納期問合せ') || title.includes('見積依頼') || title.includes('サンプル手配') || title.includes('仕掛手配')) {
       if (cat === 'delivery_check') setTitle('【欠品納期問合せ】');
       else if (cat === 'estimate_request') setTitle('【見積依頼】');
-      else if (cat === 'sample_request') setTitle('【サンプル手配】');
+      else if (cat === 'sample_request' || cat === 'work_order') setTitle('【仕掛手配】');
       else setTitle('');
     }
   };
@@ -200,7 +215,9 @@ export default function NewRequestPage(): React.JSX.Element {
     setErrorMsg('');
 
     try {
-      const validProducts = category === 'delivery_check'
+      const isWorkOrder = category === 'sample_request' || category === 'work_order';
+
+      const validProducts = (category === 'delivery_check' || isWorkOrder)
         ? products.filter(p => p.productName.trim() !== '')
         : undefined;
 
@@ -221,7 +238,7 @@ export default function NewRequestPage(): React.JSX.Element {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           category,
-          title: title || (category === 'estimate_request' ? '【見積依頼】' : '【業務課依頼】'),
+          title: title || (category === 'estimate_request' ? '【見積依頼】' : isWorkOrder ? '【仕掛手配】' : '【業務課依頼】'),
           requesterName,
           requesterDept,
           issuerName: issuerName || undefined,
@@ -234,6 +251,7 @@ export default function NewRequestPage(): React.JSX.Element {
           details,
           products: validProducts,
           estimateDetails: finalEstimateDetails,
+          approvalStatus: isWorkOrder ? 'pending' : undefined,
         }),
       });
 
@@ -355,7 +373,7 @@ export default function NewRequestPage(): React.JSX.Element {
                   {[
                     { key: 'delivery_check', label: '欠品/納期問合せ', icon: Calendar, desc: '欠品商品の仕入日確認' },
                     { key: 'estimate_request', label: '見積依頼', icon: Calculator, desc: '容量・仕様・ロット別見積' },
-                    { key: 'sample_request', label: 'サンプル手配', icon: Package, desc: '見本発送・手配' },
+                    { key: 'sample_request', label: '仕掛手配', icon: Package, desc: '商品仕掛依頼書・製造手配' },
                     { key: 'other', label: 'その他問い合わせ', icon: HelpCircle, desc: '各種業務連絡' },
                   ].map(cat => {
                     const IconComponent = cat.icon;
@@ -725,13 +743,30 @@ export default function NewRequestPage(): React.JSX.Element {
                 </div>
               )}
 
-              {/* 欠品商品明細（欠品納期問合せ時） */}
-              {category === 'delivery_check' && (
+              {/* 仕掛手配選択時の上長認証ステップ案内 */}
+              {(category === 'sample_request' || category === 'work_order') && (
+                <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-start gap-3 shadow-sm">
+                  <div className="p-2 bg-emerald-500 text-white rounded-xl shrink-0 mt-0.5">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-emerald-950">
+                      【上長認証システム対象】仕掛手配の承認フロー
+                    </h4>
+                    <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
+                      仕掛手配は登録後、<strong>「上長承認待ち」</strong>として保存されます。上長による確認・承認（認証印の押印）完了後、業務課にて手配が進められます。
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 商品明細（欠品納期問合せ ＆ 仕掛手配時共通） */}
+              {(category === 'delivery_check' || category === 'sample_request' || category === 'work_order') && (
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
                       <Box className="w-4 h-4 text-sky-600" />
-                      欠品商品明細
+                      {category === 'delivery_check' ? '欠品商品明細' : '手配商品明細（仕掛手配）'}
                     </label>
                     <button
                       type="button"

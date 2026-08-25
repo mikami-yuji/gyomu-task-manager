@@ -187,7 +187,7 @@ export function RequestResponseModal({
     const catLabel =
       requestItem.category === 'estimate_request' ? '【見積依頼】' :
       requestItem.category === 'delivery_check' ? '【欠品納期問合せ】' :
-      requestItem.category === 'sample_request' ? '【サンプル手配】' : '【業務依頼】';
+      (requestItem.category === 'sample_request' || requestItem.category === 'work_order') ? '【仕掛手配】' : '【業務依頼】';
 
     lines.push(`■ 業務依頼内容 (${catLabel})`);
     lines.push(`依頼番号: ${requestItem.id}`);
@@ -216,13 +216,19 @@ export function RequestResponseModal({
       if (est.deoxidizer) lines.push(`・脱酸素剤: ${est.deoxidizer}`);
     }
 
-    if (requestItem.category === 'delivery_check' && requestItem.products && requestItem.products.length > 0) {
+    const isWorkOrder = requestItem.category === 'sample_request' || requestItem.category === 'work_order';
+
+    if (isWorkOrder) {
+      lines.push(`上長承認: ${requestItem.approvalStatus === 'approved' ? `承認済 (${requestItem.approverName || '上長'})` : '未承認（承認待ち）'}`);
+    }
+
+    if (requestItem.products && requestItem.products.length > 0) {
       lines.push('');
-      lines.push('【欠品商品明細】');
+      lines.push(isWorkOrder ? '【仕掛手配 商品明細】' : '【欠品商品明細】');
       requestItem.products.forEach(p => {
         const catNo = p.catalogNumber ? `カタログ№:${p.catalogNumber} / ` : '';
         const wKg = p.weightKg ? `容量:${p.weightKg}kg / ` : '';
-        lines.push(`・${catNo}${wKg}${p.productName} (必要数量: ${p.quantity}${p.unit})`);
+        lines.push(`・${catNo}${wKg}${p.productName} (数量: ${p.quantity}${p.unit})`);
       });
     }
 

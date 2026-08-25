@@ -72,7 +72,7 @@ export async function notifyNewRequestCreated(request: BusinessRequest): Promise
 
   const categoryLabel = request.category === 'delivery_check' ? '納期確認' :
                         request.category === 'estimate_request' ? '見積依頼' :
-                        request.category === 'sample_request' ? 'サンプル手配' : 'その他';
+                        (request.category === 'sample_request' || request.category === 'work_order') ? '仕掛手配' : 'その他';
 
   const subject = `【業務課依頼】新規受付: [${categoryLabel}] ${request.title} (${request.id})`;
   const html = `
