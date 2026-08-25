@@ -31,7 +31,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { BusinessRequest } from '@/types/request';
-import { STATUS_CONFIG, SALES_PERSONS, CCR_PERSONS } from '@/lib/constants';
+import { STATUS_CONFIG, SALES_PERSONS, CCR_PERSONS, GYOMU_PERSONS } from '@/lib/constants';
 import { playChimeNotification } from '@/lib/sound';
 import NewRequestToast from '@/components/NewRequestToast';
 
@@ -45,6 +45,8 @@ export default function DashboardPage(): React.JSX.Element {
   // 今日のやることクイックタブ
   const [quickFilter, setQuickFilter] = useState<QuickFilterType>('all');
   const [currentUserName, setCurrentUserName] = useState<string>('');
+  const [currentUserDept, setCurrentUserDept] = useState<'sales' | 'ccr' | 'gyomu' | ''>('');
+  const [viewScope, setViewScope] = useState<'my' | 'all' | 'user'>('my');
 
   // フィルター・検索状態
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -71,9 +73,16 @@ export default function DashboardPage(): React.JSX.Element {
       const saved = getSavedUserProfile();
       if (saved) {
         setCurrentUserName(saved.name);
+        setCurrentUserDept(saved.dept);
+        setViewScope('my'); // ログイン中はデフォルトで「自分に関する依頼」をメイン表示
       } else {
         const legacyName = localStorage.getItem('gyomu_user_name');
-        if (legacyName) setCurrentUserName(legacyName);
+        if (legacyName) {
+          setCurrentUserName(legacyName);
+          setViewScope('my');
+        } else {
+          setViewScope('all');
+        }
       }
     };
 
@@ -85,6 +94,9 @@ export default function DashboardPage(): React.JSX.Element {
   const handleUserChange = (name: string): void => {
     setCurrentUserName(name);
     localStorage.setItem('gyomu_user_name', name);
+    if (name) {
+      setViewScope('my');
+    }
   };
 
   // データ取得関数（バックグラウンド更新対応）
@@ -147,11 +159,16 @@ export default function DashboardPage(): React.JSX.Element {
     return d.toISOString().split('T')[0];
   }, []);
 
-  // 選択中ユーザーで絞り込んだ依頼リスト（サマリー＆タブ連動用）
-  const userTargetRequests = useMemo(() => {
-    if (!currentUserName) return requests;
-    return requests.filter(r => r.assigneeName === currentUserName || r.requesterName === currentUserName);
-  }, [requests, currentUserName]);
+  // 選択中スコープ（自分/全員/指定担当者）で絞り込んだ基準リスト
+  const scopeTargetRequests = useMemo(() => {
+    if (viewScope === 'my' && currentUserName) {
+      return requests.filter(r => r.requesterName === currentUserName || r.assigneeName === currentUserName);
+    }
+    if (viewScope === 'user' && selectedRequester !== 'all') {
+      return requests.filter(r => r.requesterName === selectedRequester || r.assigneeName === selectedRequester);
+    }
+    return requests;
+  }, [requests, viewScope, currentUserName, selectedRequester]);
 
   // 各クイックタブの件数集計
   const quickCounts = useMemo(() => {
@@ -164,7 +181,7 @@ export default function DashboardPage(): React.JSX.Element {
     let inProgress = 0;
     let answeredToday = 0;
 
-    userTargetRequests.forEach(r => {
+    scopeTargetRequests.forEach(r => {
       const isAns = r.status === 'answered' || (r.status as string) === 'completed';
 
       // 1. 今日やるべき (至急・期限超過・未対応)
@@ -201,20 +218,21 @@ export default function DashboardPage(): React.JSX.Element {
     });
 
     return {
-      all: userTargetRequests.length,
+      all: scopeTargetRequests.length,
       urgent,
       myTasks,
       todayNew,
       inProgress,
       answeredToday,
     };
-  }, [userTargetRequests, currentUserName, todayStr]);
+  }, [scopeTargetRequests, currentUserName, todayStr]);
 
   // 発信者一覧の抽出 (営業・CCRマスター ＋ 実データ発信者)
   const requesterList = useMemo(() => {
-    const set = new Set<string>([...SALES_PERSONS, ...CCR_PERSONS]);
+    const set = new Set<string>([...SALES_PERSONS, ...CCR_PERSONS, ...GYOMU_PERSONS]);
     requests.forEach(r => {
       if (r.requesterName) set.add(r.requesterName);
+      if (r.assigneeName) set.add(r.assigneeName);
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'ja'));
   }, [requests]);
@@ -224,7 +242,7 @@ export default function DashboardPage(): React.JSX.Element {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return requests
+    return scopeTargetRequests
       .filter(item => {
         const isAns = item.status === 'answered' || (item.status as string) === 'completed';
 
@@ -261,7 +279,7 @@ export default function DashboardPage(): React.JSX.Element {
           }
         }
         if (selectedStatus !== 'all' && item.status !== selectedStatus) return false;
-        if (selectedRequester !== 'all' && item.requesterName !== selectedRequester) return false;
+        if (viewScope === 'all' && selectedRequester !== 'all' && item.requesterName !== selectedRequester && item.assigneeName !== selectedRequester) return false;
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
           const matchId = item.id.toLowerCase().includes(q);
@@ -282,7 +300,7 @@ export default function DashboardPage(): React.JSX.Element {
         if (sortOrder === 'asc') return valA.localeCompare(valB);
         return valB.localeCompare(valA);
       });
-  }, [requests, quickFilter, currentUserName, todayStr, selectedCategory, selectedStatus, selectedRequester, searchQuery, sortKey, sortOrder]);
+  }, [scopeTargetRequests, quickFilter, currentUserName, todayStr, selectedCategory, selectedStatus, viewScope, selectedRequester, searchQuery, sortKey, sortOrder]);
 
   // 2ペイン表示時のキーボード操作（↑ / ↓ キーで選択依頼を高速切り替え）
   useEffect(() => {
@@ -369,15 +387,96 @@ export default function DashboardPage(): React.JSX.Element {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Header onOpenNotifications={() => setIsNotifModalOpen(true)} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 print:hidden">
-        {/* 上部サマリーカード (信号機カラー・ユーザー連動) */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5 print:hidden">
+        {/* 🌟 メイン表示スコープ切り替え（自分 / 全員 / 他メンバー） */}
+        <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
+              <User className="w-3.5 h-3.5 text-sky-600" />
+              表示対象:
+            </span>
+
+            {/* ⭐ 自分の依頼ボタン（ログイン中ユーザー用・初期選択） */}
+            {currentUserName && (
+              <button
+                type="button"
+                onClick={() => {
+                  setViewScope('my');
+                  setSelectedRequester('all');
+                }}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-sm ${
+                  viewScope === 'my'
+                    ? 'bg-sky-600 text-white ring-2 ring-sky-500/30 shadow'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>⭐ {currentUserName}さんの依頼・担当</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${viewScope === 'my' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                  {requests.filter(r => r.requesterName === currentUserName || r.assigneeName === currentUserName).length}件
+                </span>
+              </button>
+            )}
+
+            {/* 👥 全員の依頼ボタン */}
+            <button
+              type="button"
+              onClick={() => {
+                setViewScope('all');
+                setSelectedRequester('all');
+              }}
+              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-sm ${
+                viewScope === 'all' && selectedRequester === 'all'
+                  ? 'bg-slate-800 text-white ring-2 ring-slate-700/30 shadow'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              <span>👥 全員の依頼</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${viewScope === 'all' && selectedRequester === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                {requests.length}件
+              </span>
+            </button>
+          </div>
+
+          {/* 👤 他のメンバーで絞り込み */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-slate-500 font-bold text-[11px] whitespace-nowrap">👤 他の担当者で見る:</span>
+            <select
+              value={viewScope === 'user' ? selectedRequester : (viewScope === 'all' ? selectedRequester : '')}
+              onChange={e => {
+                const val = e.target.value;
+                if (!val || val === 'all') {
+                  setViewScope('all');
+                  setSelectedRequester('all');
+                } else {
+                  setViewScope('user');
+                  setSelectedRequester(val);
+                }
+              }}
+              className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            >
+              <option value="">-- 担当者を選択 --</option>
+              {requesterList.map(name => (
+                <option key={name} value={name}>
+                  {name} {name === currentUserName ? '(自分)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* 上部サマリーカード (信号機カラー・スコープ連動) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
             <div>
-              <p className="text-xs text-slate-500 font-bold">
-                {currentUserName ? `${currentUserName}の関連依頼` : '全依頼数'}
+              <p className="text-xs text-slate-500 font-bold truncate">
+                {viewScope === 'my' && currentUserName
+                  ? `${currentUserName}さんの依頼`
+                  : viewScope === 'user' && selectedRequester !== 'all'
+                  ? `${selectedRequester}さんの依頼`
+                  : '全体の依頼数'}
               </p>
-              <p className="text-2xl font-black text-slate-800">{userTargetRequests.length}</p>
+              <p className="text-2xl font-black text-slate-800">{scopeTargetRequests.length}</p>
             </div>
             <div className="p-3 bg-slate-100 text-slate-600 rounded-xl">
               <Clock className="w-6 h-6" />
@@ -390,7 +489,7 @@ export default function DashboardPage(): React.JSX.Element {
                 <span>🔴</span> 未対応・要対応
               </p>
               <p className="text-2xl font-black text-rose-700">
-                {userTargetRequests.filter(r => r.status === 'pending').length}
+                {scopeTargetRequests.filter(r => r.status === 'pending').length}
               </p>
             </div>
             <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
@@ -404,7 +503,7 @@ export default function DashboardPage(): React.JSX.Element {
                 <span>🟡</span> 確認中・対応中
               </p>
               <p className="text-2xl font-black text-amber-700">
-                {userTargetRequests.filter(r => r.status === 'in_progress').length}
+                {scopeTargetRequests.filter(r => r.status === 'in_progress').length}
               </p>
             </div>
             <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
@@ -418,7 +517,7 @@ export default function DashboardPage(): React.JSX.Element {
                 <span>🟢</span> 回答済み
               </p>
               <p className="text-2xl font-black text-emerald-700">
-                {userTargetRequests.filter(r => r.status === 'answered' || (r.status as string) === 'completed').length}
+                {scopeTargetRequests.filter(r => r.status === 'answered' || (r.status as string) === 'completed').length}
               </p>
             </div>
             <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
