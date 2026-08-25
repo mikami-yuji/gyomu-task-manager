@@ -17,7 +17,6 @@ import {
   Check,
   Box,
   Layers,
-  StickyNote,
 } from 'lucide-react';
 import { BusinessRequest, RequestStatus, EstimateResponse, EstimateLotItem, FactoryMasterItem } from '@/types/request';
 import { GYOMU_PERSONS, FACTORY_MASTERS, STATUS_CONFIG } from '@/lib/constants';
@@ -43,7 +42,6 @@ export function RequestResponseModal({
   const [incomingQuantity, setIncomingQuantity] = useState<string>('');
   const [responseContent, setResponseContent] = useState<string>('');
   const [orderNumber, setOrderNumber] = useState<string>('');
-  const [internalNote, setInternalNote] = useState<string>('');
 
   // コピー状態表示
   const [isCopied, setIsCopied] = useState<boolean>(false);
@@ -94,7 +92,6 @@ export function RequestResponseModal({
       setIncomingQuantity(requestItem.incomingQuantity || '');
       setResponseContent(requestItem.responseContent || '');
       setOrderNumber(requestItem.orderNumber || '');
-      setInternalNote(requestItem.internalNote || '');
 
       if (requestItem.estimateResponse) {
         const er = requestItem.estimateResponse;
@@ -292,7 +289,6 @@ export function RequestResponseModal({
           estimateResponse,
           responseContent,
           orderNumber,
-          internalNote,
         }),
       });
 
@@ -748,21 +744,6 @@ export function RequestResponseModal({
               </div>
             </div>
           )}
-
-          {/* 📌 社内付箋メモ（相手には見えない、自分や課内用のメモ） */}
-          <div className="sticky-note-paper p-3.5 rounded-xl border border-yellow-300 space-y-1.5">
-            <label className="block text-xs font-black text-amber-950 flex items-center gap-1.5">
-              <StickyNote className="w-4 h-4 text-amber-700" />
-              社内付箋メモ (相手には通知されない課内・個人用の走り書き)
-            </label>
-            <textarea
-              rows={2}
-              value={internalNote}
-              onChange={e => setInternalNote(e.target.value)}
-              placeholder="例: 〇〇工場に確認中 8/18 10:00、次回入荷時に同梱手配 など"
-              className="w-full px-3 py-2 bg-yellow-100/80 border border-yellow-300 rounded-lg text-xs text-slate-900 placeholder:text-amber-800/50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white resize-y"
-            />
-          </div>
 
           {/* 回答・連絡コメント */}
           <div>

@@ -223,6 +223,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
         {/* タブ切替ナビゲーション */}
         <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-3 space-x-1">
           <button
+            type="button"
             onClick={() => setActiveTab('masters')}
             className={`px-4 py-2 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === 'masters'
@@ -234,6 +235,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
             担当者マスター・個人メール設定
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('factories')}
             className={`px-4 py-2 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === 'factories'
@@ -247,7 +249,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
         </div>
 
         {/* コンテンツエリア */}
-        <div className="p-6 max-h-[72vh] overflow-y-auto space-y-6">
+        <div className="p-6 max-h-[72vh] overflow-y-auto [scrollbar-gutter:stable] space-y-6">
           {savedSuccess && (
             <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -258,32 +260,35 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
           {/* 1. 担当者マスター ＆ 個人メール設定 */}
           {activeTab === 'masters' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="space-y-2.5">
                 <p className="text-xs text-slate-600 font-medium">
                   依頼登録や回答画面の選択肢となるメンバーと、各個人の通知用メールアドレスを設定・保存できます。
                 </p>
 
-                <div className="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                <div className="flex bg-slate-100 p-1 rounded-xl text-xs font-bold w-fit">
                   <button
+                    type="button"
                     onClick={() => setActiveMasterDept('gyomu')}
-                    className={`px-3 py-1 rounded-lg transition-all ${
-                      activeMasterDept === 'gyomu' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600'
+                    className={`px-3.5 py-1.5 rounded-lg transition-all ${
+                      activeMasterDept === 'gyomu' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     業務課 ({masters.gyomu.length})
                   </button>
                   <button
+                    type="button"
                     onClick={() => setActiveMasterDept('sales')}
-                    className={`px-3 py-1 rounded-lg transition-all ${
-                      activeMasterDept === 'sales' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600'
+                    className={`px-3.5 py-1.5 rounded-lg transition-all ${
+                      activeMasterDept === 'sales' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     営業 ({masters.sales.length})
                   </button>
                   <button
+                    type="button"
                     onClick={() => setActiveMasterDept('ccr')}
-                    className={`px-3 py-1 rounded-lg transition-all ${
-                      activeMasterDept === 'ccr' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600'
+                    className={`px-3.5 py-1.5 rounded-lg transition-all ${
+                      activeMasterDept === 'ccr' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     CCR ({masters.ccr.length})

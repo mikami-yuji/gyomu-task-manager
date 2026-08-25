@@ -17,9 +17,6 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
-  StickyNote,
-  Save,
-  Check,
   AlertTriangle,
 } from 'lucide-react';
 import { BusinessRequest } from '@/types/request';
@@ -51,17 +48,6 @@ export function VoucherPreview({
   totalCount,
   isModal = false,
 }: VoucherPreviewProps): React.JSX.Element {
-  const [internalNoteText, setInternalNoteText] = useState<string>('');
-  const [isSavingNote, setIsSavingNote] = useState<boolean>(false);
-  const [noteSavedFeedback, setNoteSavedFeedback] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (requestItem) {
-      setInternalNoteText(requestItem.internalNote || '');
-      setNoteSavedFeedback(false);
-    }
-  }, [requestItem]);
-
   if (!requestItem) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-300">
@@ -107,27 +93,6 @@ export function VoucherPreview({
       deadlineAlert = { isAlert: true, isOverdue: false, label: '⚠️ 明日期限 (至急)' };
     }
   }
-
-  // 社内付箋メモの保存ハンドラー
-  const handleSaveInternalNote = async (): Promise<void> => {
-    setIsSavingNote(true);
-    try {
-      const res = await fetch(`/api/requests/${encodeURIComponent(requestItem.id)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ internalNote: internalNoteText }),
-      });
-      if (res.ok) {
-        requestItem.internalNote = internalNoteText;
-        setNoteSavedFeedback(true);
-        setTimeout(() => setNoteSavedFeedback(false), 2500);
-      }
-    } catch (err) {
-      console.error('付箋メモ保存エラー:', err);
-    } finally {
-      setIsSavingNote(false);
-    }
-  };
 
   const est = requestItem.estimateDetails;
   const res = requestItem.estimateResponse;
@@ -269,47 +234,6 @@ export function VoucherPreview({
               </div>
             </div>
           </div>
-        </div>
-
-        {/* 📌 社内付箋（ポストイット）メモ欄（現場用・相手には見えない走り書き） */}
-        <div className="sticky-note-paper p-3.5 rounded-xl border border-yellow-300 text-slate-900 relative">
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <div className="flex items-center space-x-1.5 text-xs font-black text-amber-950">
-              <StickyNote className="w-4 h-4 text-amber-700" />
-              <span>社内付箋メモ (相手には通知されない課内・個人用の走り書き)</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleSaveInternalNote}
-              disabled={isSavingNote}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm ${
-                noteSavedFeedback
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-amber-900 hover:bg-amber-800 text-yellow-100'
-              }`}
-            >
-              {noteSavedFeedback ? (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  <span>保存済</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-3.5 h-3.5" />
-                  <span>{isSavingNote ? '保存中...' : '付箋を保存'}</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          <textarea
-            value={internalNoteText}
-            onChange={e => setInternalNoteText(e.target.value)}
-            placeholder="例: 〇〇工場に確認中 8/18 10:00、次回入荷時に同梱手配 など"
-            rows={2}
-            className="w-full bg-yellow-100/70 border border-yellow-300/80 rounded-lg p-2 text-xs text-slate-900 placeholder:text-amber-800/50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all font-sans resize-y"
-          />
         </div>
 
         {/* 依頼件名 */}

@@ -28,7 +28,6 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
-  StickyNote,
   Sparkles,
   Flame,
   Inbox,
@@ -920,12 +919,6 @@ export default function AdminDashboardPage(): React.JSX.Element {
                            req.category === 'estimate_request' ? '見積' :
                            req.category === 'sample_request' ? 'サンプル' : '他'}
                         </span>
-                        {req.internalNote && (
-                          <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-900 border border-yellow-300 rounded font-bold text-[10px] flex items-center gap-0.5" title={`社内付箋: ${req.internalNote}`}>
-                            <StickyNote className="w-3 h-3 text-amber-700" />
-                            付箋あり
-                          </span>
-                        )}
                       </div>
 
                       <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border flex items-center gap-1 ${stConf.badgeStyle}`}>
@@ -942,12 +935,6 @@ export default function AdminDashboardPage(): React.JSX.Element {
                         <span className="font-semibold text-slate-700">担当: {req.assigneeName || '未割当'}</span>
                         {req.customerName && <span>/ 顧客: {req.customerName}</span>}
                       </div>
-                      {req.internalNote && (
-                        <p className="text-amber-900 bg-yellow-50/90 border border-yellow-200/80 rounded px-2 py-0.5 text-[11px] truncate mt-1 flex items-center gap-1">
-                          <StickyNote className="w-3 h-3 text-amber-600 shrink-0" />
-                          <span>{req.internalNote}</span>
-                        </p>
-                      )}
                     </div>
 
                     <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
@@ -1098,12 +1085,6 @@ export default function AdminDashboardPage(): React.JSX.Element {
                           <span className={`w-1.5 h-1.5 rounded-full ${stConf.dotColor}`}></span>
                           {stConf.label}
                         </span>
-                        {req.internalNote && (
-                          <span className="mt-1 px-1.5 py-0.5 bg-yellow-100 text-yellow-900 border border-yellow-300 rounded font-bold text-[9px] flex items-center gap-0.5 w-fit" title={`社内付箋: ${req.internalNote}`}>
-                            <StickyNote className="w-2.5 h-2.5 text-amber-700" />
-                            付箋あり
-                          </span>
-                        )}
                       </td>
 
                       {/* 管理操作 */}
