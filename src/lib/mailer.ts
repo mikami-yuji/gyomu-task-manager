@@ -25,10 +25,12 @@ function createTransporter(): { transporter: nodemailer.Transporter | null; from
       host: smtp.host,
       port: smtp.port || 587,
       secure: smtp.port === 465,
+      requireTLS: smtp.port === 587,
       auth: (smtp.useAuth !== false && smtp.user && smtp.pass)
         ? { user: smtp.user, pass: smtp.pass }
         : undefined,
       tls: {
+        ciphers: 'SSLv3',
         rejectUnauthorized: false, // 社内自己署名証明書・社内リレーでも安全に接続
       },
     } as unknown as nodemailer.TransportOptions;

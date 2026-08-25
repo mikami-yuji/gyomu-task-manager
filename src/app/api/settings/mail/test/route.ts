@@ -17,23 +17,22 @@ export async function POST(req: Request) {
       host: settings.host,
       port: settings.port || 587,
       secure: settings.port === 465,
+      requireTLS: (settings.port || 587) === 587,
       auth: (settings.useAuth !== false && settings.user && settings.pass)
         ? { user: settings.user, pass: settings.pass }
         : undefined,
       tls: {
+        ciphers: 'SSLv3',
         rejectUnauthorized: false,
       },
     } as unknown as nodemailer.TransportOptions;
 
     const transporter = nodemailer.createTransport(transportConfig);
 
-    // 接続検証
-    await transporter.verify();
-
     // テストメール送信
     const from = settings.fromEmail
       ? `"${settings.fromName || '業務課システム'}" <${settings.fromEmail}>`
-      : 'gyomu-desk@example.com';
+      : (settings.user || 'gyomu-desk@example.com');
 
     await transporter.sendMail({
       from,
@@ -43,7 +42,7 @@ export async function POST(req: Request) {
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #0284c7; border-radius: 8px; max-width: 600px;">
           <h3 style="color: #0284c7; margin-top: 0;">🎉 メール送信テスト成功</h3>
           <p>このメールは、業務課タスク管理システムからの接続テストメールです。</p>
-          <p>Outlook 2021 / SMTP サーバーへの接続および送信が正常に確認できました。</p>
+          <p>Outlook / SMTP サーバーへの接続および送信が正常に確認できました。</p>
           <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
           <p style="font-size: 12px; color: #64748b;">送信日時: ${new Date().toLocaleString('ja-JP')}</p>
         </div>
@@ -57,14 +56,16 @@ export async function POST(req: Request) {
 
     let friendlyMessage = err.message || '接続または認証に失敗しました';
 
-    if (err.code === 'EAUTH' || err.responseCode === 535) {
-      friendlyMessage = '【認証エラー (535)】ユーザー名またはパスワードが正しくありません。Microsoft 365の場合は「アプリパスワード」の生成が必要な場合があります。';
+    if (err.message && err.message.includes('530 5.7.57')) {
+      friendlyMessage = '【Outlook認証エラー (530 5.7.57)】Microsoft 365の認証が必要です。「ユーザー認証を使用する」にチェックを入れ、メールアドレスとパスワードを入力してください。';
+    } else if (err.code === 'EAUTH' || err.responseCode === 535) {
+      friendlyMessage = '【認証エラー (535)】ユーザー名またはパスワードが正しくありません。パスワードを再入力してください。';
     } else if (err.code === 'ETIMEDOUT' || err.code === 'ESOCKET') {
-      friendlyMessage = `【接続タイムアウト】SMTPサーバー (${req ? '指定ホスト' : ''}) に接続できませんでした。サーバー名またはポート番号(587/25)をご確認ください。`;
+      friendlyMessage = '【接続タイムアウト】SMTPサーバーに接続できませんでした。ポート番号(587/25)をご確認ください。';
     } else if (err.code === 'ENOTFOUND') {
-      friendlyMessage = '【サーバーが見つかりません (ENOTFOUND)】指定されたSMTPサーバー名（ホスト）が存在しないか、社内DNSで解決できません。';
+      friendlyMessage = '【サーバーが見つかりません (ENOTFOUND)】指定されたSMTPサーバー名（ホスト）が存在しません。';
     } else if (err.code === 'ECONNREFUSED') {
-      friendlyMessage = '【接続拒否 (ECONNREFUSED)】ポート番号が閉じられているか、SMTPサービスが起動していません。ポート番号（25 / 587）をご確認ください。';
+      friendlyMessage = '【接続拒否 (ECONNREFUSED)】ポート番号が閉じられています。ポート番号をご確認ください。';
     }
 
     return NextResponse.json({
