@@ -856,13 +856,6 @@ export default function DashboardPage(): React.JSX.Element {
                       <p className={`font-bold text-sm line-clamp-1 ${isSelected ? 'text-sky-950' : 'text-slate-900'}`}>
                         {req.title}
                       </p>
-                      {req.products && req.products.length > 0 ? (
-                        <p className="text-slate-600 font-semibold text-[11px] truncate mt-0.5">
-                          明細: {req.products.map(p => p.productName).join(', ')}
-                        </p>
-                      ) : (
-                        <p className="text-slate-500 line-clamp-1 text-[11px] mt-0.5">{req.details}</p>
-                      )}
                     </div>
 
                     <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500 font-medium">
@@ -907,7 +900,7 @@ export default function DashboardPage(): React.JSX.Element {
                   <th className="p-3">発信者</th>
                   <th className="p-3">業務担当者</th>
                   <th className="p-3">カテゴリ / 承認</th>
-                  <th className="p-3">件名 / 依頼内容</th>
+                  <th className="p-3">件名</th>
                   <th className="p-3">工場コード</th>
                   <th className="p-3">工場名</th>
                   <th className="p-3">得意先 (CD)</th>
@@ -977,13 +970,6 @@ export default function DashboardPage(): React.JSX.Element {
                         <p className="font-bold text-slate-900 truncate group-hover:text-sky-600 transition-colors">
                           {req.title}
                         </p>
-                        {req.products && req.products.length > 0 ? (
-                          <p className="text-sky-700 font-semibold text-[11px] truncate">
-                            明細: {req.products.map(p => p.productName).join(', ')}
-                          </p>
-                        ) : (
-                          <p className="text-slate-400 line-clamp-1 text-[11px]">{req.details}</p>
-                        )}
                       </td>
                       {/* 工場コード */}
                       <td className="p-3 font-mono font-bold text-indigo-900 whitespace-nowrap">
