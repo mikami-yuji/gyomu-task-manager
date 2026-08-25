@@ -13,17 +13,22 @@ export type MailOption = {
  * SMTPトランスポーターの初期化（画面設定または環境変数を参照）
  */
 function createTransporter(): { transporter: nodemailer.Transporter | null; from: string } {
+  // テスト実行環境では安全のため実送信をスキップ
+  if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+    return { transporter: null, from: 'gyomu-desk@asahipac.co.jp' };
+  }
+
   const smtp = getSmtpSettings();
 
   // 1. 画面設定が有効な場合
   if (smtp.enabled && smtp.host) {
     const from = smtp.fromEmail
       ? `"${smtp.fromName || '業務課タスク管理'}" <${smtp.fromEmail}>`
-      : 'gyomu-desk@example.com';
+      : 'gyomu-desk@asahipac.co.jp';
 
     const transportConfig: nodemailer.TransportOptions = {
       host: smtp.host,
-      port: smtp.port || 587,
+      port: smtp.port || 25,
       secure: smtp.port === 465,
       requireTLS: smtp.port === 587,
       auth: (smtp.useAuth !== false && smtp.user && smtp.pass)
@@ -43,12 +48,12 @@ function createTransporter(): { transporter: nodemailer.Transporter | null; from
 
   // 2. 環境変数 (.env) が設定されている場合
   const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
+  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 25;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
   if (host) {
-    const from = process.env.SMTP_FROM || 'gyomu-desk@example.com';
+    const from = process.env.SMTP_FROM || 'gyomu-desk@asahipac.co.jp';
     return {
       transporter: nodemailer.createTransport({
         host,
@@ -62,18 +67,18 @@ function createTransporter(): { transporter: nodemailer.Transporter | null; from
   }
 
   // 3. SMTP未設定の場合
-  return { transporter: null, from: 'gyomu-desk@example.com' };
+  return { transporter: null, from: 'gyomu-desk@asahipac.co.jp' };
 }
 
 /**
  * メールを安全に送信する関数（設定がない場合やエラー発生時はログ出力のみ）
  */
-export async function sendEmailSafe(options: MailOption): Promise<{ success: boolean; message?: string }> {
+export async function sendEmailSafe(options: MailOption): Promise<boolean> {
   try {
     const { transporter, from } = createTransporter();
     if (!transporter) {
-      console.log('[MAIL SIMULATION] メール送信シミュレーション (SMTP未設定):', options);
-      return { success: true, message: 'SMTP未設定のためシミュレーション送信されました' };
+      console.log('[MAIL SIMULATION] メール送信シミュレーション (SMTP未設定またはテスト環境):', options);
+      return true;
     }
 
     const info = await transporter.sendMail({
@@ -83,11 +88,11 @@ export async function sendEmailSafe(options: MailOption): Promise<{ success: boo
       html: options.html,
     });
     console.log('[MAIL SENT] メール送信完了:', info.messageId, '宛先:', options.to);
-    return { success: true, message: 'メールが正常に送信されました' };
+    return true;
   } catch (error: unknown) {
     const err = error as Error;
     console.error('メール送信失敗:', err);
-    return { success: false, message: err.message || 'メール送信エラー' };
+    return false;
   }
 }
 
