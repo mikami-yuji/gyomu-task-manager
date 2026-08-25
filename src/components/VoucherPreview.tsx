@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Printer,
   Calendar,
@@ -22,9 +23,17 @@ import {
   ShieldCheck,
   XCircle,
   Mail,
+  Paperclip,
+  Copy,
+  Send,
+  Download,
+  ExternalLink,
+  File as FileIcon,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { BusinessRequest } from '@/types/request';
 import { SALES_PERSONS, CCR_PERSONS, GYOMU_PERSONS } from '@/lib/constants';
+import { getSavedUserProfile } from '@/lib/user';
 
 export type VoucherPreviewProps = {
   requestItem: BusinessRequest | null;
@@ -58,6 +67,54 @@ export function VoucherPreview({
   const [isApproving, setIsApproving] = useState(false);
   const [selectedApprover, setSelectedApprover] = useState('');
   const [approvalError, setApprovalError] = useState('');
+
+  // 社内コメント・メモ投稿用
+  const [commentText, setCommentText] = useState('');
+  const [sendCommentEmail, setSendCommentEmail] = useState(false);
+  const [isPostingComment, setIsPostingComment] = useState(false);
+  const [commentError, setCommentError] = useState('');
+
+  // コメント投稿処理
+  const handlePostComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim() || !requestItem) return;
+
+    setIsPostingComment(true);
+    setCommentError('');
+
+    try {
+      const savedUser = getSavedUserProfile();
+      const authorName = savedUser?.name || '社内担当者';
+      const authorDept = savedUser?.dept || 'sales';
+
+      const res = await fetch('/api/requests/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: requestItem.id,
+          authorName,
+          authorDept,
+          content: commentText.trim(),
+          sendEmail: sendCommentEmail,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setCommentText('');
+        if (onRequestUpdated) {
+          onRequestUpdated(json.data);
+        }
+      } else {
+        setCommentError(json.error || 'コメントの投稿に失敗しました');
+      }
+    } catch (err) {
+      console.error('コメント投稿エラー:', err);
+      setCommentError('通信エラーが発生しました');
+    } finally {
+      setIsPostingComment(false);
+    }
+  };
 
   if (!requestItem) {
     return (
@@ -234,6 +291,15 @@ export function VoucherPreview({
                 </button>
               </div>
             )}
+
+            <Link
+              href={`/request/new?copyFrom=${encodeURIComponent(requestItem.id)}`}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold rounded-lg flex items-center gap-1.5 shadow transition-colors"
+              title="この依頼内容を引き継いで新しい依頼を作成します"
+            >
+              <Copy className="w-3.5 h-3.5 text-sky-400" />
+              <span>コピーして作成</span>
+            </Link>
 
             <button
               type="button"
@@ -709,6 +775,119 @@ export function VoucherPreview({
               </p>
             </div>
           </div>
+        </div>
+
+        {/* 📎 添付ファイル一覧セクション (印刷にも対応) */}
+        {requestItem.attachments && requestItem.attachments.length > 0 && (
+          <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-2">
+            <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <Paperclip className="w-3.5 h-3.5 text-sky-600" />
+              添付ファイル ({requestItem.attachments.length}件)
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {requestItem.attachments.map(att => (
+                <a
+                  key={att.id}
+                  href={att.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-2.5 bg-white border border-slate-200 hover:border-sky-400 hover:bg-sky-50/50 rounded-lg shadow-2xs transition-all text-xs group"
+                >
+                  <div className="flex items-center space-x-2 truncate">
+                    {att.type.startsWith('image/') ? (
+                      <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
+                    ) : (
+                      <FileIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                    )}
+                    <span className="font-bold text-slate-800 group-hover:text-sky-700 truncate" title={att.name}>
+                      {att.name}
+                    </span>
+                    <span className="text-[10px] text-slate-400 shrink-0 font-mono">
+                      ({(att.size / 1024).toFixed(0)} KB)
+                    </span>
+                  </div>
+                  <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-600 shrink-0 ml-2" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 💬 案件メモ・社内やり取りスレッド (画面専用 no-print) */}
+        <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-4 no-print">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <MessageSquare className="w-3.5 h-3.5 text-sky-600" />
+              社内コメント・進捗メモ履歴 ({requestItem.comments?.length || 0}件)
+            </h3>
+            <span className="text-[10px] text-slate-500">関係者間のやり取りログ</span>
+          </div>
+
+          {/* 過去のコメントリスト */}
+          {requestItem.comments && requestItem.comments.length > 0 ? (
+            <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+              {requestItem.comments.map(cmt => (
+                <div key={cmt.id} className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs space-y-1">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-slate-800 flex items-center gap-1">
+                      <User className="w-3 h-3 text-sky-600" />
+                      {cmt.authorName} ({cmt.authorDept === 'sales' ? '営業' : cmt.authorDept === 'ccr' ? 'CCR' : '業務課'})
+                    </span>
+                    <span className="text-slate-400 font-mono text-[10px]">
+                      {new Date(cmt.createdAt).toLocaleString('ja-JP', {
+                        month: 'numeric',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed pl-4">
+                    {cmt.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 text-center py-2">
+              まだメモややり取りの投稿はありません。
+            </p>
+          )}
+
+          {/* コメント投稿フォーム */}
+          <form onSubmit={handlePostComment} className="pt-2 border-t border-slate-200 space-y-2">
+            {commentError && (
+              <p className="text-xs font-bold text-rose-600">{commentError}</p>
+            )}
+            <textarea
+              rows={2}
+              required
+              value={commentText}
+              onChange={e => setCommentText(e.target.value)}
+              placeholder="工場とのやり取り状況や仕様追記などの社内メモを入力..."
+              className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none shadow-2xs"
+            />
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={sendCommentEmail}
+                  onChange={e => setSendCommentEmail(e.target.checked)}
+                  className="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
+                />
+                <span>関係者へメール通知する</span>
+              </label>
+
+              <button
+                type="submit"
+                disabled={isPostingComment || !commentText.trim()}
+                className="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white rounded-lg text-xs font-bold shadow transition-all flex items-center gap-1"
+              >
+                <Send className="w-3 h-3" />
+                {isPostingComment ? '投稿中...' : 'メモを追記'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

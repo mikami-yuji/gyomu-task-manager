@@ -82,6 +82,15 @@ export type EstimateResponse = {
 /** 承認ステータス (上長認証用: 未承認/承認待ち・承認済・差戻し) */
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
+/** 社内コメント・メモ履歴アイテム */
+export type RequestComment = {
+  id: string;
+  authorName: string;
+  authorDept: 'sales' | 'ccr' | 'gyomu' | string;
+  content: string;
+  createdAt: string; // ISO文字列
+};
+
 /** 業務課依頼データモデル */
 export type BusinessRequest = {
   id: string; // 依頼番号 (例: GYM-20260803-001)
@@ -98,6 +107,8 @@ export type BusinessRequest = {
   estimateDetails?: EstimateDetails; // 見積依頼用詳細項目
   workOrderDetails?: WorkOrderDetails; // 商品仕掛依頼書用詳細項目
   attachments: AttachmentFile[];
+  comments?: RequestComment[]; // 案件内コメント・進捗メモスレッド
+  ccEmails?: string[]; // 通知共有CCメールアドレス
   status: RequestStatus;
   assigneeName?: string; // 業務課/仕入担当者
   factoryName?: string;  // 依頼時の指定工場名
@@ -139,6 +150,8 @@ export type CreateRequestInput = {
   approvedAt?: string;
   approvalComment?: string;
   attachments?: AttachmentFile[];
+  comments?: RequestComment[];
+  ccEmails?: string[];
   internalNote?: string;
 };
 
@@ -159,6 +172,8 @@ export type UpdateRequestInput = {
   approvedAt?: string;
   approvalComment?: string;
   internalNote?: string;
+  attachments?: AttachmentFile[];
+  comments?: RequestComment[];
   desiredDeliveryDate?: string;
   details?: string;
 };

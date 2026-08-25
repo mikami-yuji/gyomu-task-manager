@@ -96,6 +96,8 @@ export async function sendEmailSafe(options: MailOption): Promise<boolean> {
   }
 }
 
+export const sendMail = sendEmailSafe;
+
 /**
  * 新規依頼作成時のメール通知を送信する関数
  */
@@ -112,6 +114,13 @@ export async function notifyNewRequestCreated(request: BusinessRequest): Promise
     const em = masters.memberEmails?.[name];
     if (em && em.includes('@')) emails.add(em);
   });
+
+  // 通知共有CCメールアドレスを追加
+  if (request.ccEmails && Array.isArray(request.ccEmails)) {
+    request.ccEmails.forEach(e => {
+      if (e && e.includes('@')) emails.add(e);
+    });
+  }
 
   // 通知設定で新規通知ONのアドレスを追加
   notifSettings

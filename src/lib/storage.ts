@@ -167,6 +167,8 @@ export function createRequest(input: CreateRequestInput): BusinessRequest {
     estimateDetails: input.estimateDetails,
     estimateResponse: initialEstimateResponse,
     attachments: input.attachments || [],
+    comments: input.comments || [],
+    ccEmails: input.ccEmails || [],
     status: 'pending',
     createdAt: now,
     updatedAt: now,
@@ -208,10 +210,49 @@ export function updateRequest(id: string, input: UpdateRequestInput): BusinessRe
     estimateResponse: updatedEstimateResponse,
     responseContent: input.responseContent !== undefined ? input.responseContent : current.responseContent,
     orderNumber: input.orderNumber !== undefined ? input.orderNumber : current.orderNumber,
+    internalNote: input.internalNote !== undefined ? input.internalNote : current.internalNote,
+    approvalStatus: input.approvalStatus !== undefined ? input.approvalStatus : current.approvalStatus,
+    approverName: input.approverName !== undefined ? input.approverName : current.approverName,
+    approvedAt: input.approvedAt !== undefined ? input.approvedAt : current.approvedAt,
+    approvalComment: input.approvalComment !== undefined ? input.approvalComment : current.approvalComment,
     desiredDeliveryDate: input.desiredDeliveryDate !== undefined ? input.desiredDeliveryDate : current.desiredDeliveryDate,
     details: input.details !== undefined ? input.details : current.details,
-    completedAt: input.status === 'answered' ? now : current.completedAt,
+    attachments: input.attachments !== undefined ? input.attachments : current.attachments,
+    comments: input.comments !== undefined ? input.comments : current.comments,
     updatedAt: now,
+    completedAt: input.status === 'answered' && !current.completedAt ? now : current.completedAt,
+  };
+
+  requests[index] = updated;
+  saveRequests(requests);
+  return updated;
+}
+
+/**
+ * 案件へのコメント追加関数
+ */
+export function addRequestComment(
+  requestId: string,
+  comment: { authorName: string; authorDept: string; content: string }
+): BusinessRequest | null {
+  const requests = getAllRequests();
+  const index = requests.findIndex(r => r.id === requestId);
+  if (index === -1) return null;
+
+  const current = requests[index];
+  const newComment = {
+    id: `cmt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    authorName: comment.authorName,
+    authorDept: comment.authorDept,
+    content: comment.content,
+    createdAt: new Date().toISOString(),
+  };
+
+  const updatedComments = [...(current.comments || []), newComment];
+  const updated: BusinessRequest = {
+    ...current,
+    comments: updatedComments,
+    updatedAt: new Date().toISOString(),
   };
 
   requests[index] = updated;

@@ -25,8 +25,15 @@ import {
   UserCheck,
   Sparkles,
   RefreshCw,
+  Paperclip,
+  Upload,
+  Image as ImageIcon,
+  File as FileIcon,
+  X,
+  Copy,
+  Mail,
 } from 'lucide-react';
-import { RequestCategory, Department, ProductItem, EstimateDetails, WorkOrderDetails, FactoryMasterItem } from '@/types/request';
+import { RequestCategory, Department, ProductItem, EstimateDetails, WorkOrderDetails, FactoryMasterItem, AttachmentFile, BusinessRequest } from '@/types/request';
 import {
   SALES_PERSONS,
   CCR_PERSONS,
@@ -95,6 +102,17 @@ export default function NewRequestPage(): React.JSX.Element {
 
   const [customPackageForm, setCustomPackageForm] = useState<string>('');
   const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState<boolean>(false);
+
+  // 添付ファイル（見積依頼・その他問い合わせ用）
+  const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+
+  // 通知CCメール
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [ccInput, setCcInput] = useState<string>('');
+
+  // 複製元情報バッジ
+  const [copiedFromId, setCopiedFromId] = useState<string | null>(null);
 
   const [isNotifModalOpen, setIsNotifModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -179,12 +197,100 @@ export default function NewRequestPage(): React.JSX.Element {
     setIsTitleManuallyEdited(false);
   };
 
+  // ファイルアップロード処理（画像・PDF・Excel等）
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setIsUploading(true);
+    setErrorMsg('');
+
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setAttachments(prev => [...prev, ...json.data]);
+      } else {
+        setErrorMsg(json.error || 'ファイルのアップロードに失敗しました');
+      }
+    } catch (err) {
+      console.error('アップロード通信エラー:', err);
+      setErrorMsg('ファイルアップロード通信エラーが発生しました');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(att => att.id !== id));
+  };
+
+  // CC追加・削除
+  const handleAddCcEmail = (emailToAdd?: string) => {
+    const target = (emailToAdd || ccInput).trim();
+    if (!target) return;
+    if (!target.includes('@')) {
+      setErrorMsg('有効なメールアドレスを入力してください');
+      return;
+    }
+    if (!ccEmails.includes(target)) {
+      setCcEmails(prev => [...prev, target]);
+    }
+    setCcInput('');
+  };
+
+  const handleRemoveCcEmail = (email: string) => {
+    setCcEmails(prev => prev.filter(e => e !== email));
+  };
+
   useEffect(() => {
     const savedUser = getSavedUserProfile();
     if (savedUser) {
       setRequesterName(savedUser.name);
       if (savedUser.dept === 'sales' || savedUser.dept === 'ccr') {
         setRequesterDept(savedUser.dept);
+      }
+    }
+
+    // URLクエリパラメータ ?copyFrom=ID の検出と復元
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const copyId = params.get('copyFrom');
+      if (copyId) {
+        setCopiedFromId(copyId);
+        fetch(`/api/requests/${encodeURIComponent(copyId)}`)
+          .then(res => res.json())
+          .then(json => {
+            if (json.success && json.data) {
+              const src: BusinessRequest = json.data;
+              setCategory(src.category);
+              setTitle(src.title);
+              setIsTitleManuallyEdited(true);
+              setCustomerName(src.customerName || '');
+              setCustomerCode(src.customerCode || '');
+              setFactoryName(src.factoryName || '');
+              setFactoryCode(src.factoryCode || '');
+              setAssigneeName(src.assigneeName || '');
+              setDetails(src.details || '');
+              if (src.products && src.products.length > 0) {
+                setProducts(src.products.map((p, i) => ({ ...p, id: (Date.now() + i).toString() })));
+              }
+              if (src.estimateDetails) {
+                setEstimateState(src.estimateDetails);
+              }
+              if (src.workOrderDetails) {
+                setWorkOrderState(src.workOrderDetails);
+              }
+            }
+          })
+          .catch(err => console.error('複製元依頼取得エラー:', err));
       }
     }
 
@@ -345,6 +451,8 @@ export default function NewRequestPage(): React.JSX.Element {
           products: validProducts,
           estimateDetails: finalEstimateDetails,
           approvalStatus: isWorkOrder ? 'pending' : undefined,
+          attachments: (category === 'estimate_request' || category === 'other') ? attachments : [],
+          ccEmails: ccEmails.length > 0 ? ccEmails : undefined,
         }),
       });
 
@@ -366,6 +474,9 @@ export default function NewRequestPage(): React.JSX.Element {
     setSubmittedId(null);
     setTitle('');
     setIsTitleManuallyEdited(false);
+    setAttachments([]);
+    setCcEmails([]);
+    setCopiedFromId(null);
     const savedUser = getSavedUserProfile();
     if (savedUser) {
       setRequesterName(savedUser.name);
@@ -459,6 +570,18 @@ export default function NewRequestPage(): React.JSX.Element {
             </div>
 
             <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="p-6 sm:p-8 space-y-6">
+              {copiedFromId && (
+                <div className="p-3.5 bg-sky-50 border border-sky-200 text-sky-900 rounded-xl text-xs flex items-center justify-between font-bold">
+                  <div className="flex items-center gap-2">
+                    <Copy className="w-4 h-4 text-sky-600 shrink-0" />
+                    <span>依頼番号「{copiedFromId}」の仕様内容をコピーして作成しています</span>
+                  </div>
+                  <span className="text-[11px] text-sky-600 bg-white px-2 py-0.5 rounded-full border border-sky-200">
+                    納期等を調整して登録してください
+                  </span>
+                </div>
+              )}
+
               {errorMsg && (
                 <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
@@ -976,6 +1099,133 @@ export default function NewRequestPage(): React.JSX.Element {
                 </div>
               )}
 
+              {/* 📎 画像・仕様書・PDFファイル添付エリア（見積依頼・その他問い合わせ限定） */}
+              {(category === 'estimate_request' || category === 'other') && (
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                      <Paperclip className="w-4 h-4 text-sky-600" />
+                      仕様書・図面・画像のファイル添付
+                      <span className="text-[10px] font-normal text-slate-500">(任意・最大20MB/ファイル)</span>
+                    </label>
+                    <span className="text-xs font-bold text-slate-500">{attachments.length}件 添付中</span>
+                  </div>
+
+                  {/* ドロップゾーン */}
+                  <div
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={e => {
+                      e.preventDefault();
+                      handleFileUpload(e.dataTransfer.files);
+                    }}
+                    className="border-2 border-dashed border-slate-300 hover:border-sky-500 bg-white rounded-xl p-5 text-center transition-all cursor-pointer relative group"
+                  >
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf,.xlsx,.xls,.docx,.doc"
+                      onChange={e => handleFileUpload(e.target.files)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="flex flex-col items-center justify-center space-y-1.5 text-slate-500 group-hover:text-sky-600">
+                      <Upload className="w-7 h-7 text-slate-400 group-hover:text-sky-500" />
+                      <p className="text-xs font-bold">
+                        {isUploading ? 'ファイルをアップロード中...' : 'クリックしてファイルを選択 または ここにドラッグ＆ドロップ'}
+                      </p>
+                      <p className="text-[10px] text-slate-400">PDF, JPG, PNG, Excel, Word 等に対応</p>
+                    </div>
+                  </div>
+
+                  {/* 添付中ファイル一覧 */}
+                  {attachments.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                      {attachments.map(att => (
+                        <div
+                          key={att.id}
+                          className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl shadow-xs text-xs"
+                        >
+                          <div className="flex items-center space-x-2 truncate">
+                            {att.type.startsWith('image/') ? (
+                              <ImageIcon className="w-4 h-4 text-sky-500 shrink-0" />
+                            ) : (
+                              <FileIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                            )}
+                            <span className="font-semibold text-slate-800 truncate" title={att.name}>
+                              {att.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400 shrink-0">
+                              ({(att.size / 1024).toFixed(0)} KB)
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAttachment(att.id)}
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                            title="削除"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 👥 関係者への通知共有 (CCメール) */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                    <Mail className="w-4 h-4 text-sky-600" />
+                    通知共有先 (CCメール)
+                    <span className="text-[10px] font-normal text-slate-500">(任意)</span>
+                  </label>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={ccInput}
+                    onChange={e => setCcInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCcEmail();
+                      }
+                    }}
+                    placeholder="例: assistant@asahipac.co.jp"
+                    className="flex-1 px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddCcEmail()}
+                    className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition-all"
+                  >
+                    追加
+                  </button>
+                </div>
+
+                {ccEmails.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {ccEmails.map(email => (
+                      <span
+                        key={email}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-100 text-sky-900 border border-sky-200 rounded-lg text-xs font-semibold"
+                      >
+                        {email}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCcEmail(email)}
+                          className="text-sky-600 hover:text-rose-600 p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* 備考・特記事項 */}
               <div>
                 <label className="block text-sm font-bold text-slate-800 mb-1">
@@ -995,7 +1245,7 @@ export default function NewRequestPage(): React.JSX.Element {
               <div className="pt-4 border-t border-slate-200 flex justify-end">
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || isUploading}
                   className="w-full sm:w-auto px-8 py-3 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-base rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
                 >
                   <Send className="w-5 h-5" />

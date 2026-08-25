@@ -29,10 +29,12 @@ import {
   Flame,
   Inbox,
   Sparkles,
+  Download,
 } from 'lucide-react';
 import { BusinessRequest } from '@/types/request';
 import { STATUS_CONFIG, SALES_PERSONS, CCR_PERSONS, GYOMU_PERSONS } from '@/lib/constants';
 import { playChimeNotification } from '@/lib/sound';
+import { exportRequestsToCsv } from '@/lib/exportCsv';
 import NewRequestToast from '@/components/NewRequestToast';
 
 export type QuickFilterType = 'all' | 'urgent' | 'my_tasks' | 'today_new' | 'in_progress' | 'answered_today';
@@ -774,9 +776,21 @@ export default function DashboardPage(): React.JSX.Element {
               <button
                 onClick={() => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))}
                 className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-1"
+                title="並び順を切り替え"
               >
                 <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
                 {sortOrder === 'desc' ? '降順' : '昇順'}
+              </button>
+
+              {/* 📥 CSV出力ボタン */}
+              <button
+                onClick={() => exportRequestsToCsv(filteredRequests, `業務課依頼一覧_${new Date().toISOString().split('T')[0]}.csv`)}
+                disabled={filteredRequests.length === 0}
+                className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-40 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors"
+                title="現在の絞り込み結果をExcel対応CSV形式でダウンロードします"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600" />
+                <span>CSV出力 ({filteredRequests.length})</span>
               </button>
             </div>
           </div>

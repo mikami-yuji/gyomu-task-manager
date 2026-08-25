@@ -3,6 +3,7 @@ import {
   getAllRequests,
   createRequest,
   updateRequest,
+  addRequestComment,
   getNotificationSettings,
   getMemberMasters,
   saveMemberMasters,
@@ -74,6 +75,35 @@ describe('ストレージ層の動作テスト', () => {
 
     // クリーンアップ
     saveMemberMasters(initialMasters);
+  });
+
+  it('案件への社内コメント追加と添付ファイル情報の保持ができること', () => {
+    const newReq = createRequest({
+      category: 'estimate_request',
+      title: 'コメントテスト依頼',
+      requesterName: '見上',
+      requesterDept: 'sales',
+      customerName: 'テスト顧客',
+      desiredDeliveryDate: '2026-08-30',
+      details: '詳細',
+      attachments: [
+        { id: 'att_1', name: '図面.pdf', size: 1024, type: 'application/pdf', url: '/api/upload/test.pdf' },
+      ],
+      ccEmails: ['assistant@example.com'],
+    });
+
+    expect(newReq.attachments).toHaveLength(1);
+    expect(newReq.ccEmails).toContain('assistant@example.com');
+
+    const withComment = addRequestComment(newReq.id, {
+      authorName: '吉田',
+      authorDept: 'gyomu',
+      content: '工場に確認中です。',
+    });
+
+    expect(withComment).not.toBeNull();
+    expect(withComment?.comments).toHaveLength(1);
+    expect(withComment?.comments?.[0].content).toBe('工場に確認中です。');
   });
 
   it('データバックアップファイルが正常に生成されること', () => {
