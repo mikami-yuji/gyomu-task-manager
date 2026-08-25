@@ -42,17 +42,17 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
   const [newFactoryCode, setNewFactoryCode] = useState<string>('');
   const [newFactoryAssignee, setNewFactoryAssignee] = useState<string>('');
   
-  // SMTPメール設定ステート
+  // SMTPメール設定ステート（初期値: 社内SMTPリレー mail.asahipac.co.jp）
   const [smtpSettings, setSmtpSettings] = useState<SmtpSettings>({
     enabled: true,
-    host: 'smtp.office365.com',
-    port: 587,
+    host: 'mail.asahipac.co.jp',
+    port: 25,
     secure: false,
     user: '',
     pass: '',
-    fromEmail: '',
+    fromEmail: 'mikami@asahipac.co.jp',
     fromName: '業務課タスク管理システム',
-    useAuth: true,
+    useAuth: false,
     notifyOnCreate: true,
     notifyOnAnswer: true,
     notifyOnApproval: true,

@@ -276,15 +276,15 @@ export function saveMemberMasters(masters: MemberMaster): void {
 const SMTP_FILE_PATH = path.join(DATA_DIR, 'smtp_settings.json');
 
 const INITIAL_SMTP_SETTINGS = {
-  enabled: false,
-  host: 'smtp.office365.com',
-  port: 587,
+  enabled: true,
+  host: 'mail.asahipac.co.jp',
+  port: 25,
   secure: false,
   user: '',
   pass: '',
-  fromEmail: 'gyomu-desk@company.com',
+  fromEmail: 'mikami@asahipac.co.jp',
   fromName: '業務課タスク管理システム',
-  useAuth: true,
+  useAuth: false,
   notifyOnCreate: true,
   notifyOnAnswer: true,
   notifyOnApproval: true,
