@@ -141,13 +141,24 @@ export default function NewRequestPage(): React.JSX.Element {
 
     if (cat === 'estimate_request') {
       const specParts: string[] = [];
-      if (est.capacity?.trim()) specParts.push(est.capacity.trim());
-      if (est.packageForm && est.packageForm !== 'その他 (直接入力)') {
-        specParts.push(est.packageForm);
-      } else if (est.packageType) {
-        specParts.push(est.packageType);
+      // ① 材質 (未入力で構成があれば構成)
+      if (est.material?.trim()) {
+        specParts.push(est.material.trim());
+      } else if (est.structure?.trim()) {
+        specParts.push(est.structure.trim());
       }
-      if (est.quantity?.trim()) specParts.push(est.quantity.trim());
+
+      // ② 量目（容量）
+      if (est.capacity?.trim()) {
+        specParts.push(est.capacity.trim());
+      }
+
+      // ③ 色数
+      if (est.colorCount?.trim()) {
+        const c = est.colorCount.trim();
+        specParts.push(c.includes('色') ? c : `${c}色`);
+      }
+
       return specParts.join(' ');
     }
 
@@ -525,12 +536,12 @@ export default function NewRequestPage(): React.JSX.Element {
                       setTitle(e.target.value);
                       setIsTitleManuallyEdited(true);
                     }}
-                    placeholder="例: 909-5k-4000m 雲竜無地"
+                    placeholder={category === 'estimate_request' ? '例: ポリポリ 1k 6色' : '例: 909-5k-4000m 雲竜無地'}
                     className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all shadow-sm"
                   />
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  ※ 得意先名や商品明細（カタログ№・容量・数量等）を入力すると、件名が自動で分かりやすく組み立てられます（直接手動編集も可能です）。
+                  ※ 入力フォーム（欠品の場合はカタログ№・容量・数量等、見積の場合は材質・量目・色数等）を入力すると件名が自動生成されます（手動編集も可能です）。
                 </p>
               </div>
 
