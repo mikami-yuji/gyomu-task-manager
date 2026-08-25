@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
+import { NotificationModal } from '@/components/NotificationModal';
 import {
   Send,
   ArrowLeft,
@@ -91,6 +92,7 @@ export default function NewRequestPage(): React.JSX.Element {
 
   const [customPackageForm, setCustomPackageForm] = useState<string>('');
 
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [submittedId, setSubmittedId] = useState<string | null>(null);
@@ -301,7 +303,7 @@ export default function NewRequestPage(): React.JSX.Element {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Header />
+      <Header onOpenNotifications={() => setIsNotifModalOpen(true)} />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8">
         <div className="mb-6 flex items-center justify-between">
@@ -879,6 +881,11 @@ export default function NewRequestPage(): React.JSX.Element {
           </div>
         )}
       </main>
+
+      <NotificationModal
+        isOpen={isNotifModalOpen}
+        onClose={() => setIsNotifModalOpen(false)}
+      />
     </div>
   );
 }
