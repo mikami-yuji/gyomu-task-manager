@@ -272,3 +272,43 @@ export function saveMemberMasters(masters: MemberMaster): void {
     console.error('マスター保存エラー:', error);
   }
 }
+
+const SMTP_FILE_PATH = path.join(DATA_DIR, 'smtp_settings.json');
+
+const INITIAL_SMTP_SETTINGS = {
+  enabled: false,
+  host: 'smtp.office365.com',
+  port: 587,
+  secure: false,
+  user: '',
+  pass: '',
+  fromEmail: 'gyomu-desk@company.com',
+  fromName: '業務課タスク管理システム',
+  useAuth: true,
+  notifyOnCreate: true,
+  notifyOnAnswer: true,
+  notifyOnApproval: true,
+};
+
+export function getSmtpSettings(): typeof INITIAL_SMTP_SETTINGS {
+  ensureDataDirectory();
+  if (!fs.existsSync(SMTP_FILE_PATH)) {
+    saveSmtpSettings(INITIAL_SMTP_SETTINGS);
+    return INITIAL_SMTP_SETTINGS;
+  }
+  try {
+    const fileData = fs.readFileSync(SMTP_FILE_PATH, 'utf-8');
+    return { ...INITIAL_SMTP_SETTINGS, ...JSON.parse(fileData) };
+  } catch (error) {
+    console.error('SMTP設定読み込みエラー:', error);
+    return INITIAL_SMTP_SETTINGS;
+  }
+}
+
+export function saveSmtpSettings(settings: typeof INITIAL_SMTP_SETTINGS): void {
+  try {
+    atomicWriteJsonFile(SMTP_FILE_PATH, settings);
+  } catch (error) {
+    console.error('SMTP設定保存エラー:', error);
+  }
+}

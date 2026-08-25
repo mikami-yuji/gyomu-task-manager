@@ -189,3 +189,19 @@ export type MemberMaster = {
   factories?: FactoryMasterItem[];
   memberEmails?: Record<string, string>; // 個人別メールアドレス設定
 };
+
+/** メール通知・SMTPサーバー接続設定 (Outlook 2021 / 社内SMTP対応) */
+export type SmtpSettings = {
+  enabled: boolean;
+  host: string;
+  port: number;
+  secure?: boolean;
+  user?: string;
+  pass?: string;
+  fromEmail?: string;
+  fromName?: string;
+  useAuth?: boolean;
+  notifyOnCreate?: boolean;
+  notifyOnAnswer?: boolean;
+  notifyOnApproval?: boolean;
+};
