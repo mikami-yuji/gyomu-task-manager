@@ -21,6 +21,7 @@ import {
   UserCheck,
   ShieldCheck,
   XCircle,
+  Mail,
 } from 'lucide-react';
 import { BusinessRequest } from '@/types/request';
 import { SALES_PERSONS, CCR_PERSONS, GYOMU_PERSONS } from '@/lib/constants';
@@ -233,6 +234,28 @@ export function VoucherPreview({
                 </button>
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => {
+                const subject = encodeURIComponent(`【業務課依頼: ${requestItem.id}】${requestItem.title}`);
+                const body = encodeURIComponent(
+                  `依頼番号: ${requestItem.id}\n` +
+                  `発信者: ${requestItem.requesterName} (${requestItem.requesterDept === 'sales' ? '営業' : 'CCR'})\n` +
+                  `得意先: ${requestItem.customerName || '未指定'}\n` +
+                  `希望納期: ${requestItem.desiredDeliveryDate}\n` +
+                  `件名: ${requestItem.title}\n\n` +
+                  `【依頼内容】\n${requestItem.details || ''}\n\n` +
+                  (requestItem.responseContent ? `【業務課回答】\n${requestItem.responseContent}\n` : '')
+                );
+                window.location.href = `mailto:?subject=${subject}&body=${body}`;
+              }}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 text-xs font-bold rounded-lg flex items-center gap-1.5 shadow transition-colors"
+              title="Outlook 2021でメール作成画面を開きます"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>Outlook</span>
+            </button>
 
             <button
               type="button"

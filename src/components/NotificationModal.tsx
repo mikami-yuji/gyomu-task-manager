@@ -632,9 +632,27 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-sky-600" />
-                  かんたん接続プリセット
+                  かんたん接続プリセット（クリックで一発入力）
                 </label>
                 <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSmtpSettings({
+                        ...smtpSettings,
+                        host: 'mail.asahipac.co.jp',
+                        port: 25,
+                        secure: false,
+                        useAuth: false,
+                        user: '',
+                        pass: '',
+                        fromEmail: 'mikami@asahipac.co.jp',
+                      })
+                    }
+                    className="px-3 py-1.5 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 rounded-xl text-xs font-black text-emerald-800 shadow-sm transition-all"
+                  >
+                    ⭐ アサヒパック社内設定 (mail.asahipac.co.jp / ポート25 / 認証なし)
+                  </button>
                   <button
                     type="button"
                     onClick={() =>
@@ -648,22 +666,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps): 
                     }
                     className="px-3 py-1.5 bg-white border border-slate-300 hover:border-indigo-500 rounded-xl text-xs font-bold text-slate-700 shadow-sm transition-all"
                   >
-                    Microsoft 365 / Outlook (smtp.office365.com:587)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSmtpSettings({
-                        ...smtpSettings,
-                        host: 'mail.company.local',
-                        port: 25,
-                        secure: false,
-                        useAuth: false,
-                      })
-                    }
-                    className="px-3 py-1.5 bg-white border border-slate-300 hover:border-indigo-500 rounded-xl text-xs font-bold text-slate-700 shadow-sm transition-all"
-                  >
-                    社内SMTPリレー (ポート25 / 認証なし)
+                    Microsoft 365 / Outlook (587)
                   </button>
                 </div>
               </div>
