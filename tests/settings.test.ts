@@ -1,9 +1,21 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET as getMastersApi, POST as saveMastersApi } from '../src/app/api/settings/masters/route';
 import { GET as getNotificationsApi, POST as saveNotificationsApi } from '../src/app/api/settings/notifications/route';
+import { getMemberMasters, saveMemberMasters, getNotificationSettings, saveNotificationSettings } from '../src/lib/storage';
+import { MemberMaster, NotificationSetting } from '../src/types/request';
 
 describe('APIルート: /api/settings/masters のテスト', () => {
+  let originalMasters: MemberMaster;
+
+  beforeAll(() => {
+    originalMasters = getMemberMasters();
+  });
+
+  afterAll(() => {
+    saveMemberMasters(originalMasters);
+  });
+
   it('GET でマスター一覧が取得できること', async () => {
     const res = await getMastersApi();
     const json = await res.json();
@@ -15,9 +27,9 @@ describe('APIルート: /api/settings/masters のテスト', () => {
 
   it('POST でマスター一覧が更新できること', async () => {
     const updatedPayload = {
-      sales: ['仲', '見上', 'テスト営業'],
-      ccr: ['田中', '佐藤'],
-      gyomu: ['吉田', '高野'],
+      sales: [...originalMasters.sales, 'テスト一時営業'],
+      ccr: [...originalMasters.ccr],
+      gyomu: [...originalMasters.gyomu],
     };
 
     const req = new NextRequest('http://localhost:3000/api/settings/masters', {
@@ -30,11 +42,21 @@ describe('APIルート: /api/settings/masters のテスト', () => {
 
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
-    expect(json.data.sales).toContain('テスト営業');
+    expect(json.data.sales).toContain('テスト一時営業');
   });
 });
 
 describe('APIルート: /api/settings/notifications のテスト', () => {
+  let originalNotifications: NotificationSetting[];
+
+  beforeAll(() => {
+    originalNotifications = getNotificationSettings();
+  });
+
+  afterAll(() => {
+    saveNotificationSettings(originalNotifications);
+  });
+
   it('GET で通知設定一覧が取得できること', async () => {
     const res = await getNotificationsApi();
     const json = await res.json();
@@ -49,7 +71,7 @@ describe('APIルート: /api/settings/notifications のテスト', () => {
       {
         id: 'test-notif',
         name: 'テスト通知',
-        department: 'sales',
+        department: 'sales' as const,
         email: 'test@example.com',
         notifyOnCreate: true,
         notifyOnAnswer: true,
@@ -70,3 +92,4 @@ describe('APIルート: /api/settings/notifications のテスト', () => {
     expect(json.data).toHaveLength(1);
   });
 });
+

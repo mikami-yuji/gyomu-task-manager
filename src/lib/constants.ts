@@ -46,6 +46,7 @@ export const GYOMU_PERSONS = [
   '榮',
   '玉里',
   '藤井',
+  '高野',
 ] as const;
 
 /**
