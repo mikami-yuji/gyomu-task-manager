@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestById, updateRequest } from '@/lib/storage';
+import { getRequestById, updateRequest, OptimisticLockError } from '@/lib/storage';
 import { validateAndSanitizeUpdateInput } from '@/lib/validation';
 import { notifyRequestUpdated, notifyRequestApproved } from '@/lib/mailer';
 
@@ -46,6 +46,17 @@ export async function PATCH(
     const body = await request.json();
     const validatedInput = validateAndSanitizeUpdateInput(body);
 
+    // 上長承認実行時のPINコード認証チェック（なりすまし承認防止）
+    if (validatedInput.approvalStatus === 'approved') {
+      const requiredPin = process.env.APPROVAL_PIN || '1234';
+      if (!validatedInput.approvalPin || validatedInput.approvalPin !== requiredPin) {
+        return NextResponse.json(
+          { success: false, error: '上長承認用暗証番号（PIN）が正しくありません' },
+          { status: 403 }
+        );
+      }
+    }
+
     const updated = updateRequest(targetId, validatedInput);
     if (!updated) {
       return NextResponse.json({ success: false, error: '更新対象の依頼が見つかりません' }, { status: 404 });
@@ -68,6 +79,9 @@ export async function PATCH(
     return NextResponse.json({ success: true, data: updated }, { status: 200 });
   } catch (error) {
     console.error('PATCH /api/requests/[...id] エラー:', error);
+    if (error instanceof OptimisticLockError) {
+      return NextResponse.json({ success: false, error: error.message, isConflict: true }, { status: 409 });
+    }
     const errorMessage = error instanceof Error ? error.message : '依頼の更新に失敗しました';
     return NextResponse.json({ success: false, error: errorMessage }, { status: 400 });
   }

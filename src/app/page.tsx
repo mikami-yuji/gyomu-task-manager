@@ -33,7 +33,6 @@ import {
 } from 'lucide-react';
 import { BusinessRequest } from '@/types/request';
 import { STATUS_CONFIG, SALES_PERSONS, CCR_PERSONS, GYOMU_PERSONS } from '@/lib/constants';
-import { playChimeNotification } from '@/lib/sound';
 import { exportRequestsToCsv } from '@/lib/exportCsv';
 import NewRequestToast from '@/components/NewRequestToast';
 
@@ -120,8 +119,6 @@ export default function DashboardPage(): React.JSX.Element {
         if (prevRequestIdsRef.current !== null) {
           const newItems = incoming.filter(item => !prevRequestIdsRef.current?.has(item.id));
           if (newItems.length > 0) {
-            // 新着依頼を検知！優しいチャイム音を再生
-            playChimeNotification();
             setNewIncomingRequests(newItems);
           }
         }

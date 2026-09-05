@@ -31,10 +31,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         );
       }
 
+      // セキュリティ: 許可された拡張子のみ受け付ける（ホワイトリスト方式）
+      const ext = path.extname(file.name).toLowerCase();
+      const ALLOWED_EXTENSIONS = new Set([
+        '.pdf', '.xlsx', '.xls', '.docx', '.doc', '.csv', '.txt',
+        '.jpg', '.jpeg', '.png', '.gif', '.webp', '.zip'
+      ]);
+
+      if (!ALLOWED_EXTENSIONS.has(ext)) {
+        return NextResponse.json(
+          { success: false, error: `許可されていないファイル形式です (${ext})。PDF、Excel、Word、画像、ZIP等をご利用ください。` },
+          { status: 400 }
+        );
+      }
+
       const timestamp = Date.now();
       const safeRandom = Math.random().toString(36).substring(2, 8);
       // 安全なファイル名サニタイズ
-      const ext = path.extname(file.name);
       const baseName = path.basename(file.name, ext).replace(/[^\w\s\u3000-\u30FF\u4E00-\u9FFF-]/g, '_');
       const uniqueFileName = `${timestamp}_${safeRandom}_${baseName}${ext}`;
       const filePath = path.join(uploadDir, uniqueFileName);

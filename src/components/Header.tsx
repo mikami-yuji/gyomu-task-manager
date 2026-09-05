@@ -7,13 +7,10 @@ import {
   Clock,
   ShieldCheck,
   Type,
-  Volume2,
-  VolumeX,
   Radio,
   User,
   ChevronDown,
 } from 'lucide-react';
-import { playChimeNotification } from '@/lib/sound';
 import { UserProfile, getSavedUserProfile } from '@/lib/user';
 import { UserLoginModal } from '@/components/UserLoginModal';
 
@@ -27,7 +24,6 @@ type HeaderProps = {
  */
 export function Header({ onOpenNotifications, isAutoRefreshing = true }: HeaderProps): React.JSX.Element {
   const [fontSize, setFontSize] = useState<'normal' | 'large'>('normal');
-  const [isSoundMuted, setIsSoundMuted] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState<boolean>(false);
 
@@ -49,12 +45,6 @@ export function Header({ onOpenNotifications, isAutoRefreshing = true }: HeaderP
       document.documentElement.setAttribute('data-font-size', saved);
     }
 
-    // 保存済みのミュート設定を復元
-    const savedMute = localStorage.getItem('gyomu_sound_muted');
-    if (savedMute === 'true') {
-      setIsSoundMuted(true);
-    }
-
     return () => {
       window.removeEventListener('gyomu_user_changed', updateUserState);
     };
@@ -65,16 +55,6 @@ export function Header({ onOpenNotifications, isAutoRefreshing = true }: HeaderP
     setFontSize(nextSize);
     localStorage.setItem('gyomu_font_size', nextSize);
     document.documentElement.setAttribute('data-font-size', nextSize);
-  };
-
-  const toggleSound = (): void => {
-    const nextMuted = !isSoundMuted;
-    setIsSoundMuted(nextMuted);
-    localStorage.setItem('gyomu_sound_muted', nextMuted ? 'true' : 'false');
-    if (!nextMuted) {
-      // ONにしたときに確認チャイムを鳴らす
-      playChimeNotification();
-    }
   };
 
   return (
@@ -106,30 +86,6 @@ export function Header({ onOpenNotifications, isAutoRefreshing = true }: HeaderP
                   <span>自動更新中</span>
                 </div>
               )}
-
-              {/* 通知音 ON/OFF 切り替えボタン */}
-              <button
-                type="button"
-                onClick={toggleSound}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all border ${
-                  !isSoundMuted
-                    ? 'bg-sky-500/80 text-white border-sky-400 shadow-sm'
-                    : 'bg-white/10 text-slate-300 border-white/15 hover:bg-white/20'
-                }`}
-                title={isSoundMuted ? '通知音: OFF (クリックでON)' : '通知音: ON (クリックでOFF)'}
-              >
-                {!isSoundMuted ? (
-                  <>
-                    <Volume2 className="w-3.5 h-3.5 text-white" />
-                    <span>音: ON</span>
-                  </>
-                ) : (
-                  <>
-                    <VolumeX className="w-3.5 h-3.5 text-slate-400" />
-                    <span>音: OFF</span>
-                  </>
-                )}
-              </button>
 
               {/* 文字サイズ切替ボタン（現場の視認性重視） */}
               <button

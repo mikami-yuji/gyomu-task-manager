@@ -126,6 +126,7 @@ export type BusinessRequest = {
   completedAt?: string; // 完了日時 ISO文字列
   createdAt: string; // 作成日時 ISO文字列
   updatedAt: string; // 更新日時 ISO文字列
+  version?: number; // 楽観的排他制御用バージョン番号 (同時更新衝突防止)
 };
 
 /** 新規依頼作成パラメータ */
@@ -176,6 +177,8 @@ export type UpdateRequestInput = {
   comments?: RequestComment[];
   desiredDeliveryDate?: string;
   details?: string;
+  version?: number; // 楽観的ロック照合用バージョン
+  approvalPin?: string; // 上長承認時の暗証番号
 };
 
 /** 担当者別通知メール設定 */

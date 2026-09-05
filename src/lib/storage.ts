@@ -120,6 +120,13 @@ export function saveRequests(requests: BusinessRequest[]): void {
   }
 }
 
+export class OptimisticLockError extends Error {
+  constructor(message: string = '他のユーザーによって既に更新されています。最新のデータを再読み込みしてください。') {
+    super(message);
+    this.name = 'OptimisticLockError';
+  }
+}
+
 /**
  * 新規依頼作成（管理番号ルール: YYYY/MM/DD-001）
  */
@@ -172,6 +179,7 @@ export function createRequest(input: CreateRequestInput): BusinessRequest {
     status: 'pending',
     createdAt: now,
     updatedAt: now,
+    version: 1, // 初期バージョン
   };
 
   requests.unshift(newRequest);
@@ -187,6 +195,16 @@ export function updateRequest(id: string, input: UpdateRequestInput): BusinessRe
   if (index === -1) return null;
 
   const current = requests[index];
+
+  // 楽観的ロック検証（指定されたversionと現在のversionが不一致の場合は衝突とみなす）
+  if (input.version !== undefined && current.version !== undefined) {
+    if (input.version !== current.version) {
+      throw new OptimisticLockError(
+        `この依頼（${id}）は他の担当者によって更新されています（最新Ver: ${current.version} / 指定Ver: ${input.version}）。再読み込みしてください。`
+      );
+    }
+  }
+
   const now = new Date().toISOString();
 
   // 工場更新時は estimateResponse も統合
@@ -198,6 +216,8 @@ export function updateRequest(id: string, input: UpdateRequestInput): BusinessRe
       factoryCode: input.factoryCode !== undefined ? input.factoryCode : updatedEstimateResponse?.factoryCode,
     };
   }
+
+  const nextVersion = (current.version || 1) + 1;
 
   const updated: BusinessRequest = {
     ...current,
@@ -221,6 +241,7 @@ export function updateRequest(id: string, input: UpdateRequestInput): BusinessRe
     comments: input.comments !== undefined ? input.comments : current.comments,
     updatedAt: now,
     completedAt: input.status === 'answered' && !current.completedAt ? now : current.completedAt,
+    version: nextVersion,
   };
 
   requests[index] = updated;

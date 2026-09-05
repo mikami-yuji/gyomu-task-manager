@@ -29,4 +29,6 @@ coverage/
 # data storage
 data/*.json
 data/backups/
+data/uploads/
+data/test_uploads/
 !data/sample.json

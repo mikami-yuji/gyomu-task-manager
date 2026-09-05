@@ -112,6 +112,8 @@ const updateRequestSchema = z.object({
   internalNote: z.string().max(1000).optional(),
   desiredDeliveryDate: z.string().optional(),
   details: z.string().max(1000).optional(),
+  version: z.number().optional(),
+  approvalPin: z.string().max(20).optional(),
 });
 
 export function validateAndSanitizeCreateInput(rawData: unknown): CreateRequestInput {
@@ -228,5 +230,7 @@ export function validateAndSanitizeUpdateInput(rawData: unknown): UpdateRequestI
     internalNote: parsed.internalNote ? sanitizeInput(parsed.internalNote) : undefined,
     desiredDeliveryDate: parsed.desiredDeliveryDate,
     details: parsed.details ? sanitizeInput(parsed.details) : undefined,
+    version: parsed.version,
+    approvalPin: parsed.approvalPin ? sanitizeInput(parsed.approvalPin) : undefined,
   };
 }

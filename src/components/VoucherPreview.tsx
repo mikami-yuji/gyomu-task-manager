@@ -66,6 +66,7 @@ export function VoucherPreview({
 }: VoucherPreviewProps): React.JSX.Element {
   const [isApproving, setIsApproving] = useState(false);
   const [selectedApprover, setSelectedApprover] = useState('');
+  const [approverPin, setApproverPin] = useState('');
   const [approvalError, setApprovalError] = useState('');
 
   // 社内コメント・メモ投稿用
@@ -176,10 +177,14 @@ export function VoucherPreview({
     window.print();
   };
 
-  // 上長承認実行
+  // 上長承認実行 (PINコード認証付き)
   const handleApprove = async (approver: string): Promise<void> => {
     if (!approver.trim()) {
-      setApprovalError('承認者名を選択または入力してください');
+      setApprovalError('承認者名を選択してください');
+      return;
+    }
+    if (!approverPin.trim()) {
+      setApprovalError('暗証番号（PIN: 1234）を入力してください');
       return;
     }
     setIsApproving(true);
@@ -193,10 +198,13 @@ export function VoucherPreview({
           approvalStatus: 'approved',
           approverName: approver.trim(),
           approvedAt: nowIso,
+          approvalPin: approverPin.trim(),
+          version: requestItem.version,
         }),
       });
       const json = await res.json();
       if (json.success) {
+        setApproverPin('');
         if (onRequestUpdated) onRequestUpdated(json.data);
       } else {
         setApprovalError(json.error || '承認に失敗しました');
@@ -405,14 +413,23 @@ export function VoucherPreview({
                     ))}
                   </optgroup>
                 </select>
+                <input
+                  type="password"
+                  maxLength={8}
+                  value={approverPin}
+                  onChange={e => setApproverPin(e.target.value)}
+                  placeholder="暗証PIN (1234)"
+                  className="w-24 px-2 py-1.5 bg-white border border-emerald-400 rounded-lg text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  title="上長承認用の暗証番号を入力してください (初期設定: 1234)"
+                />
                 <button
                   type="button"
-                  disabled={isApproving || !selectedApprover}
+                  disabled={isApproving || !selectedApprover || !approverPin}
                   onClick={() => handleApprove(selectedApprover)}
-                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-lg text-xs font-black shadow transition-colors flex items-center gap-1"
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-lg text-xs font-black shadow transition-colors flex items-center gap-1"
                 >
                   <UserCheck className="w-3.5 h-3.5" />
-                  {isApproving ? '認証中...' : '上長承認する (認証)'}
+                  {isApproving ? '認証中...' : '承認実行 (認証)'}
                 </button>
               </div>
             ) : (

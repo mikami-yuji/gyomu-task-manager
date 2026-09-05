@@ -34,7 +34,6 @@ import {
 } from 'lucide-react';
 import { BusinessRequest, RequestStatus } from '@/types/request';
 import { GYOMU_PERSONS, STATUS_CONFIG } from '@/lib/constants';
-import { playChimeNotification } from '@/lib/sound';
 import NewRequestToast from '@/components/NewRequestToast';
 
 export type AdminQuickFilterType = 'all' | 'urgent' | 'today_new' | 'in_progress' | 'answered_today';
@@ -96,8 +95,6 @@ export default function AdminDashboardPage(): React.JSX.Element {
         if (prevRequestIdsRef.current !== null) {
           const newItems = incoming.filter(item => !prevRequestIdsRef.current?.has(item.id));
           if (newItems.length > 0) {
-            // 新着依頼を検知！優しいチャイム音を再生
-            playChimeNotification();
             setNewIncomingRequests(newItems);
           }
         }
