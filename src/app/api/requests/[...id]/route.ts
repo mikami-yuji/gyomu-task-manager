@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestById, updateRequest } from '@/lib/storage';
 import { validateAndSanitizeUpdateInput } from '@/lib/validation';
-import { notifyRequestUpdated } from '@/lib/mailer';
+import { notifyRequestUpdated, notifyRequestApproved } from '@/lib/mailer';
 
 type RouteParams = {
   params: Promise<{ id: string | string[] }>;
@@ -55,6 +55,13 @@ export async function PATCH(
     if (validatedInput.status || validatedInput.responseContent) {
       notifyRequestUpdated(updated).catch(err => {
         console.error('メール送信失敗(非同期):', err);
+      });
+    }
+
+    // 上長承認完了時、非同期でメール通知
+    if (validatedInput.approvalStatus === 'approved') {
+      notifyRequestApproved(updated).catch(err => {
+        console.error('上長承認メール送信失敗(非同期):', err);
       });
     }
 

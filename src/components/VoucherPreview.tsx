@@ -255,27 +255,27 @@ export function VoucherPreview({
     <div className={`bg-white rounded-2xl ${isModal ? '' : 'shadow-sm border border-slate-200'} overflow-hidden flex flex-col printable-voucher`}>
       {/* 2ペイン用ツールバー（ページナビゲーション・印刷ボタン） */}
       {!isModal && (
-        <div className="px-5 py-3 bg-slate-900 text-white flex items-center justify-between no-print shrink-0">
-          <div className="flex items-center space-x-3">
-            <span className="text-xs font-mono px-2 py-0.5 bg-slate-800 text-sky-300 rounded border border-slate-700">
+        <div className="px-4 py-2.5 bg-slate-100/90 border-b border-slate-200 text-slate-800 flex items-center justify-between no-print shrink-0">
+          <div className="flex items-center space-x-2.5">
+            <span className="text-xs font-mono font-black px-2.5 py-0.5 bg-white text-sky-900 rounded-md border border-slate-200 shadow-2xs">
               {requestItem.id}
             </span>
             {currentIndex !== undefined && totalCount !== undefined && (
-              <span className="text-xs text-slate-400 font-mono">
+              <span className="text-xs text-slate-500 font-mono font-semibold">
                 {currentIndex + 1} / {totalCount} 件
               </span>
             )}
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5">
             {/* 前へ / 次へ ナビゲーション */}
             {(onNavigatePrev || onNavigateNext) && (
-              <div className="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700 mr-2">
+              <div className="flex items-center bg-white rounded-lg p-0.5 border border-slate-200 mr-1 shadow-2xs">
                 <button
                   type="button"
                   onClick={onNavigatePrev}
                   disabled={!hasPrev}
-                  className="p-1 text-slate-300 hover:text-white disabled:opacity-30 disabled:hover:text-slate-300 transition-colors"
+                  className="p-1 text-slate-600 hover:text-slate-900 disabled:opacity-25 transition-colors rounded"
                   title="前の依頼 (↑キー)"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -284,7 +284,7 @@ export function VoucherPreview({
                   type="button"
                   onClick={onNavigateNext}
                   disabled={!hasNext}
-                  className="p-1 text-slate-300 hover:text-white disabled:opacity-30 disabled:hover:text-slate-300 transition-colors"
+                  className="p-1 text-slate-600 hover:text-slate-900 disabled:opacity-25 transition-colors rounded"
                   title="次の依頼 (↓キー)"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -294,11 +294,11 @@ export function VoucherPreview({
 
             <Link
               href={`/request/new?copyFrom=${encodeURIComponent(requestItem.id)}`}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold rounded-lg flex items-center gap-1.5 shadow transition-colors"
+              className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold rounded-lg flex items-center gap-1 shadow-2xs transition-colors"
               title="この依頼内容を引き継いで新しい依頼を作成します"
             >
-              <Copy className="w-3.5 h-3.5 text-sky-400" />
-              <span>コピーして作成</span>
+              <Copy className="w-3.5 h-3.5 text-slate-500" />
+              <span>コピー</span>
             </Link>
 
             <button
@@ -316,31 +316,31 @@ export function VoucherPreview({
                 );
                 window.location.href = `mailto:?subject=${subject}&body=${body}`;
               }}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 text-xs font-bold rounded-lg flex items-center gap-1.5 shadow transition-colors"
+              className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold rounded-lg flex items-center gap-1 shadow-2xs transition-colors"
               title="Outlook 2021でメール作成画面を開きます"
             >
-              <Mail className="w-3.5 h-3.5" />
+              <Mail className="w-3.5 h-3.5 text-sky-600" />
               <span>Outlook</span>
             </button>
 
             <button
               type="button"
               onClick={handlePrint}
-              className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow transition-colors"
+              className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold rounded-lg flex items-center gap-1 shadow-2xs transition-colors"
               title="A4用紙で綺麗に印刷します"
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span>印刷 (A4)</span>
+              <Printer className="w-3.5 h-3.5 text-slate-600" />
+              <span>印刷</span>
             </button>
 
             {onOpenResponseModal && (
               <button
                 type="button"
                 onClick={() => onOpenResponseModal(requestItem)}
-                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow transition-colors"
+                className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-black rounded-lg flex items-center gap-1 shadow-sm transition-colors ml-1"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>仕入回答</span>
+                <span>回答・編集</span>
               </button>
             )}
           </div>

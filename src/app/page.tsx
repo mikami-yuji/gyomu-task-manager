@@ -390,15 +390,132 @@ export default function DashboardPage(): React.JSX.Element {
       <Header onOpenNotifications={() => setIsNotifModalOpen(true)} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5 print:hidden">
-        {/* 🌟 メイン表示スコープ切り替え（自分 / 全員 / 他メンバー） */}
-        <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
-              <User className="w-3.5 h-3.5 text-sky-600" />
-              表示対象:
-            </span>
+        {/* 🌟 統合ステータスタブバー（クイックフィルター ＆ 集計 ＆ 表示対象） */}
+        <div className="bg-white px-4 py-2.5 rounded-2xl shadow-sm border border-slate-200/90 flex flex-wrap items-center justify-between gap-3">
+          {/* 左側: ステータスタブピル */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* すべて */}
+            <button
+              type="button"
+              onClick={() => setQuickFilter('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                quickFilter === 'all'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
+              }`}
+            >
+              <span>すべて</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                quickFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {quickCounts.all}
+              </span>
+            </button>
 
-            {/* ⭐ 自分の依頼ボタン（ログイン中ユーザー用・初期選択） */}
+            {/* 🚨 今日やるべき・至急 */}
+            <button
+              type="button"
+              onClick={() => setQuickFilter(quickFilter === 'urgent' ? 'all' : 'urgent')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                quickFilter === 'urgent'
+                  ? 'bg-rose-600 text-white border-rose-700 shadow-sm'
+                  : quickCounts.urgent > 0
+                  ? 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              <Flame className={`w-3.5 h-3.5 ${quickFilter === 'urgent' ? 'text-white' : 'text-rose-500'}`} />
+              <span>要対応・至急</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                quickFilter === 'urgent'
+                  ? 'bg-white text-rose-700'
+                  : quickCounts.urgent > 0
+                  ? 'bg-rose-200 text-rose-900'
+                  : 'bg-slate-200 text-slate-600'
+              }`}>
+                {quickCounts.urgent}
+              </span>
+            </button>
+
+            {/* 🟡 確認中 */}
+            <button
+              type="button"
+              onClick={() => setQuickFilter(quickFilter === 'in_progress' ? 'all' : 'in_progress')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                quickFilter === 'in_progress'
+                  ? 'bg-amber-600 text-white border-amber-700 shadow-sm'
+                  : 'bg-amber-50/70 text-amber-900 border-amber-200 hover:bg-amber-100'
+              }`}
+            >
+              <span>確認中</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                quickFilter === 'in_progress' ? 'bg-white text-amber-800' : 'bg-amber-200 text-amber-950'
+              }`}>
+                {quickCounts.inProgress}
+              </span>
+            </button>
+
+            {/* 🟢 本日回答済み */}
+            <button
+              type="button"
+              onClick={() => setQuickFilter(quickFilter === 'answered_today' ? 'all' : 'answered_today')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                quickFilter === 'answered_today'
+                  ? 'bg-emerald-700 text-white border-emerald-800 shadow-sm'
+                  : 'bg-emerald-50/70 text-emerald-900 border-emerald-200 hover:bg-emerald-100'
+              }`}
+            >
+              <span>本日回答済</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                quickFilter === 'answered_today' ? 'bg-white text-emerald-800' : 'bg-emerald-200 text-emerald-950'
+              }`}>
+                {quickCounts.answeredToday}
+              </span>
+            </button>
+
+            {/* 📮 今日の新着 */}
+            <button
+              type="button"
+              onClick={() => setQuickFilter(quickFilter === 'today_new' ? 'all' : 'today_new')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                quickFilter === 'today_new'
+                  ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm'
+                  : 'bg-indigo-50/70 text-indigo-900 border-indigo-200 hover:bg-indigo-100'
+              }`}
+            >
+              <Inbox className={`w-3.5 h-3.5 ${quickFilter === 'today_new' ? 'text-white' : 'text-indigo-500'}`} />
+              <span>新着</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                quickFilter === 'today_new' ? 'bg-white text-indigo-700' : 'bg-indigo-200 text-indigo-900'
+              }`}>
+                {quickCounts.todayNew}
+              </span>
+            </button>
+
+            {/* 👤 自分の担当（ログイン時のみ） */}
+            {currentUserName && (
+              <button
+                type="button"
+                onClick={() => setQuickFilter(quickFilter === 'my_tasks' ? 'all' : 'my_tasks')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                  quickFilter === 'my_tasks'
+                    ? 'bg-sky-700 text-white border-sky-800 shadow-sm'
+                    : 'bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100'
+                }`}
+              >
+                <UserCheck className="w-3.5 h-3.5 text-sky-600" />
+                <span>マイ担当</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  quickFilter === 'my_tasks' ? 'bg-white text-sky-700' : 'bg-sky-200 text-sky-900'
+                }`}>
+                  {quickCounts.myTasks}
+                </span>
+              </button>
+            )}
+          </div>
+
+          {/* 右側: 表示スコープ切り替え（自分 / 全員 / 担当者指定） */}
+          <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200/80 text-xs">
             {currentUserName && (
               <button
                 type="button"
@@ -406,43 +523,33 @@ export default function DashboardPage(): React.JSX.Element {
                   setViewScope('my');
                   setSelectedRequester('all');
                 }}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-sm ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
                   viewScope === 'my'
-                    ? 'bg-sky-600 text-white ring-2 ring-sky-500/30 shadow'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                    ? 'bg-white text-sky-800 shadow-2xs font-black'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
+                title="ログインユーザーに関連する依頼のみ表示"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>⭐ {currentUserName}さんの依頼・担当</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${viewScope === 'my' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
-                  {requests.filter(r => r.requesterName === currentUserName || r.assigneeName === currentUserName).length}件
-                </span>
+                <span>⭐ 自分</span>
               </button>
             )}
 
-            {/* 👥 全員の依頼ボタン */}
             <button
               type="button"
               onClick={() => {
                 setViewScope('all');
                 setSelectedRequester('all');
               }}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-sm ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
                 viewScope === 'all' && selectedRequester === 'all'
-                  ? 'bg-slate-800 text-white ring-2 ring-slate-700/30 shadow'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  ? 'bg-white text-slate-900 shadow-2xs font-black'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
+              title="全員の依頼を表示"
             >
-              <span>👥 全員の依頼</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${viewScope === 'all' && selectedRequester === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
-                {requests.length}件
-              </span>
+              <span>👥 全員</span>
             </button>
-          </div>
 
-          {/* 👤 他のメンバーで絞り込み */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-500 font-bold text-[11px] whitespace-nowrap">👤 他の担当者で見る:</span>
             <select
               value={viewScope === 'user' ? selectedRequester : (viewScope === 'all' ? selectedRequester : '')}
               onChange={e => {
@@ -455,9 +562,9 @@ export default function DashboardPage(): React.JSX.Element {
                   setSelectedRequester(val);
                 }
               }}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500"
             >
-              <option value="">-- 担当者を選択 --</option>
+              <option value="">👤 担当者絞込</option>
               {requesterList.map(name => (
                 <option key={name} value={name}>
                   {name} {name === currentUserName ? '(自分)' : ''}
@@ -467,219 +574,27 @@ export default function DashboardPage(): React.JSX.Element {
           </div>
         </div>
 
-        {/* 上部サマリーカード (信号機カラー・スコープ連動) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-500 font-bold truncate">
-                {viewScope === 'my' && currentUserName
-                  ? `${currentUserName}さんの依頼`
-                  : viewScope === 'user' && selectedRequester !== 'all'
-                  ? `${selectedRequester}さんの依頼`
-                  : '全体の依頼数'}
-              </p>
-              <p className="text-2xl font-black text-slate-800">{scopeTargetRequests.length}</p>
-            </div>
-            <div className="p-3 bg-slate-100 text-slate-600 rounded-xl">
-              <Clock className="w-6 h-6" />
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-rose-300 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-rose-800 font-bold flex items-center gap-1">
-                <span>🔴</span> 未対応・要対応
-              </p>
-              <p className="text-2xl font-black text-rose-700">
-                {scopeTargetRequests.filter(r => r.status === 'pending').length}
-              </p>
-            </div>
-            <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
-              <AlertCircle className="w-6 h-6" />
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-amber-300 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-amber-900 font-bold flex items-center gap-1">
-                <span>🟡</span> 確認中・対応中
-              </p>
-              <p className="text-2xl font-black text-amber-700">
-                {scopeTargetRequests.filter(r => r.status === 'in_progress').length}
-              </p>
-            </div>
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-              <MessageSquare className="w-6 h-6" />
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-emerald-300 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-emerald-900 font-bold flex items-center gap-1">
-                <span>🟢</span> 回答済み
-              </p>
-              <p className="text-2xl font-black text-emerald-700">
-                {scopeTargetRequests.filter(r => r.status === 'answered' || (r.status as string) === 'completed').length}
-              </p>
-            </div>
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-
-        {/* 🌟 「今日のやること」ワンクリッククイックタブバー */}
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center space-x-1.5 text-xs font-black text-slate-800">
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <span>今日のやること・クイック絞り込み:</span>
-            </div>
-
-            {/* 自分の名前ピッカー（マイタスク連動） */}
-            <div className="flex items-center space-x-2 text-xs">
-              <span className="text-slate-500 font-bold text-[11px]">👤 あなたのお名前:</span>
-              <select
-                value={currentUserName}
-                onChange={e => handleUserChange(e.target.value)}
-                className="px-2.5 py-1 bg-slate-100 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              >
-                <option value="">(未選択 - 全員)</option>
-                {requesterList.map(name => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* クイックタブボタン群 */}
-          <div className="flex flex-wrap gap-2">
-            {/* 1. 今日やるべき */}
-            <button
-              type="button"
-              onClick={() => setQuickFilter(quickFilter === 'urgent' ? 'all' : 'urgent')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-                quickFilter === 'urgent'
-                  ? 'bg-rose-600 text-white border-rose-700 shadow-md ring-2 ring-rose-400/30'
-                  : 'bg-rose-50/80 text-rose-800 border-rose-200 hover:bg-rose-100'
-              }`}
-            >
-              <Flame className="w-3.5 h-3.5 text-rose-500" />
-              <span>🚨 今日やるべき (至急・期限超過)</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                quickFilter === 'urgent' ? 'bg-white text-rose-700' : 'bg-rose-200 text-rose-900'
-              }`}>
-                {quickCounts.urgent}
-              </span>
-            </button>
-
-            {/* 2. 自分の担当 */}
-            <button
-              type="button"
-              onClick={() => setQuickFilter(quickFilter === 'my_tasks' ? 'all' : 'my_tasks')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-                quickFilter === 'my_tasks'
-                  ? 'bg-sky-700 text-white border-sky-800 shadow-md ring-2 ring-sky-400/30'
-                  : 'bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100'
-              }`}
-            >
-              <UserCheck className="w-3.5 h-3.5 text-sky-600" />
-              <span>👤 自分の担当 {currentUserName ? `(${currentUserName})` : ''}</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                quickFilter === 'my_tasks' ? 'bg-white text-sky-700' : 'bg-sky-200 text-sky-900'
-              }`}>
-                {quickCounts.myTasks}
-              </span>
-            </button>
-
-            {/* 3. 今日の新着 */}
-            <button
-              type="button"
-              onClick={() => setQuickFilter(quickFilter === 'today_new' ? 'all' : 'today_new')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-                quickFilter === 'today_new'
-                  ? 'bg-indigo-600 text-white border-indigo-700 shadow-md ring-2 ring-indigo-400/30'
-                  : 'bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-100'
-              }`}
-            >
-              <Inbox className="w-3.5 h-3.5 text-indigo-500" />
-              <span>📮 本日の新着依頼</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                quickFilter === 'today_new' ? 'bg-white text-indigo-700' : 'bg-indigo-200 text-indigo-900'
-              }`}>
-                {quickCounts.todayNew}
-              </span>
-            </button>
-
-            {/* 4. 確認中・仕入問合せ中 */}
-            <button
-              type="button"
-              onClick={() => setQuickFilter(quickFilter === 'in_progress' ? 'all' : 'in_progress')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-                quickFilter === 'in_progress'
-                  ? 'bg-amber-600 text-white border-amber-700 shadow-md ring-2 ring-amber-400/30'
-                  : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
-              }`}
-            >
-              <span>🟡 確認中・問合せ中</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                quickFilter === 'in_progress' ? 'bg-white text-amber-800' : 'bg-amber-200 text-amber-950'
-              }`}>
-                {quickCounts.inProgress}
-              </span>
-            </button>
-
-            {/* 5. 本日回答済み */}
-            <button
-              type="button"
-              onClick={() => setQuickFilter(quickFilter === 'answered_today' ? 'all' : 'answered_today')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-                quickFilter === 'answered_today'
-                  ? 'bg-emerald-700 text-white border-emerald-800 shadow-md ring-2 ring-emerald-400/30'
-                  : 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100'
-              }`}
-            >
-              <span>🟢 本日回答済み</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                quickFilter === 'answered_today' ? 'bg-white text-emerald-800' : 'bg-emerald-200 text-emerald-950'
-              }`}>
-                {quickCounts.answeredToday}
-              </span>
-            </button>
-
-            {/* 6. すべてクリア */}
-            {quickFilter !== 'all' && (
-              <button
-                type="button"
-                onClick={() => setQuickFilter('all')}
-                className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors border border-slate-300"
-              >
-                ✕ 絞り込み解除 (全{quickCounts.all}件)
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* フィルター＆操作バー */}
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
-            <div className="flex flex-wrap gap-1.5">
+        {/* 🌟 統合ツールバー（カテゴリ・検索・表示モード・CSV） */}
+        <div className="bg-white p-2.5 rounded-2xl shadow-sm border border-slate-200/90 flex flex-wrap items-center justify-between gap-2.5">
+          {/* 左側: カテゴリセレクター ＆ 検索バー */}
+          <div className="flex items-center gap-2 flex-1 min-w-[280px]">
+            {/* カテゴリ切り替え（ピル） */}
+            <div className="hidden sm:flex bg-slate-100 p-0.5 rounded-xl text-xs shrink-0">
               {[
-                { key: 'all', label: 'すべての依頼' },
-                { key: 'delivery_check', label: '欠品/納期問合せ' },
-                { key: 'estimate_request', label: '見積依頼' },
+                { key: 'all', label: 'すべて' },
+                { key: 'delivery_check', label: '欠品/納期' },
+                { key: 'estimate_request', label: '見積' },
                 { key: 'sample_request', label: '仕掛手配' },
-                { key: 'other', label: 'その他' },
+                { key: 'other', label: '他' },
               ].map(cat => (
                 <button
                   key={cat.key}
+                  type="button"
                   onClick={() => setSelectedCategory(cat.key)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-2.5 py-1.5 rounded-lg font-bold transition-all text-[11px] ${
                     selectedCategory === cat.key
-                      ? 'bg-sky-700 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-white text-sky-900 shadow-2xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   {cat.label}
@@ -687,112 +602,125 @@ export default function DashboardPage(): React.JSX.Element {
               ))}
             </div>
 
-            <div className="flex items-center space-x-2">
-              <button
-                type="button"
-                onClick={() => fetchRequests(false)}
-                className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
-                title="最新情報に更新"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-              <div className="flex bg-slate-100 p-1 rounded-xl">
-                <button
-                  onClick={() => setViewMode('split')}
-                  className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                    viewMode === 'split' ? 'bg-white text-sky-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                  title="2ペイン表示 (一覧 ＋ 伝票プレビュー)"
-                >
-                  <Columns className="w-4 h-4" />
-                  <span className="hidden sm:inline text-[11px]">2ペイン</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                    viewMode === 'table' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                  title="一覧表テーブル表示"
-                >
-                  <List className="w-4 h-4" />
-                  <span className="hidden sm:inline text-[11px]">表</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('cards')}
-                  className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                    viewMode === 'cards' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                  title="カード表示"
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                  <span className="hidden sm:inline text-[11px]">カード</span>
-                </button>
-              </div>
-            </div>
-          </div>
+            {/* モバイル用カテゴリセレクト */}
+            <select
+              value={selectedCategory}
+              onChange={e => setSelectedCategory(e.target.value)}
+              className="sm:hidden px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            >
+              <option value="all">全カテゴリ</option>
+              <option value="delivery_check">欠品/納期問合せ</option>
+              <option value="estimate_request">見積依頼</option>
+              <option value="sample_request">仕掛手配</option>
+              <option value="other">その他</option>
+            </select>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            {/* 検索入力 */}
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="依頼番号、件名、得意先CD、工場名、工場コード..."
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
+                placeholder="依頼番号、件名、得意先、工場名で検索..."
+                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 右側: ステータス / 並び替え / 表示モード / CSV */}
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            {/* ステータスセレクト */}
+            <select
+              value={selectedStatus}
+              onChange={e => setSelectedStatus(e.target.value)}
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            >
+              <option value="all">全ステータス</option>
+              <option value="pending">未着手</option>
+              <option value="in_progress">確認中</option>
+              <option value="answered">回答済み</option>
+              <option value="on_hold">保留</option>
+            </select>
+
+            {/* 昇順/降順 */}
+            <button
+              type="button"
+              onClick={() => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))}
+              className="p-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors"
+              title={`並び順: ${sortOrder === 'desc' ? '降順 (新しい順)' : '昇順 (古い順)'}`}
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" />
+            </button>
+
+            {/* 最新情報更新 */}
+            <button
+              type="button"
+              onClick={() => fetchRequests(false)}
+              className="p-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors"
+              title="最新情報に更新"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+
+            {/* 表示モード（2ペイン | 表 | カード） */}
+            <div className="flex bg-slate-100 p-0.5 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setViewMode('split')}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                  viewMode === 'split' ? 'bg-white text-sky-900 shadow-2xs font-black' : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="2ペイン表示 (一覧 ＋ 伝票プレビュー)"
+              >
+                <Columns className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-[11px]">2ペイン</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                  viewMode === 'table' ? 'bg-white text-slate-900 shadow-2xs font-black' : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="一覧表テーブル表示"
+              >
+                <List className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-[11px]">表</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('cards')}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                  viewMode === 'cards' ? 'bg-white text-slate-900 shadow-2xs font-black' : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="カード表示"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-[11px]">カード</span>
+              </button>
             </div>
 
-            <div className="flex items-center space-x-2 flex-wrap gap-y-2 w-full sm:w-auto justify-end">
-              <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-
-              {/* 発信者選択ドロップダウン */}
-              <select
-                value={selectedRequester}
-                onChange={e => setSelectedRequester(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              >
-                <option value="all">全発信者</option>
-                {requesterList.map(name => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-
-              {/* ステータス選択ドロップダウン */}
-              <select
-                value={selectedStatus}
-                onChange={e => setSelectedStatus(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              >
-                <option value="all">全ステータス</option>
-                <option value="pending">未着手</option>
-                <option value="in_progress">確認中</option>
-                <option value="answered">回答済み</option>
-                <option value="on_hold">保留</option>
-              </select>
-
-              <button
-                onClick={() => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-1"
-                title="並び順を切り替え"
-              >
-                <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
-                {sortOrder === 'desc' ? '降順' : '昇順'}
-              </button>
-
-              {/* 📥 CSV出力ボタン */}
-              <button
-                onClick={() => exportRequestsToCsv(filteredRequests, `業務課依頼一覧_${new Date().toISOString().split('T')[0]}.csv`)}
-                disabled={filteredRequests.length === 0}
-                className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-40 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors"
-                title="現在の絞り込み結果をExcel対応CSV形式でダウンロードします"
-              >
-                <Download className="w-3.5 h-3.5 text-emerald-600" />
-                <span>CSV出力 ({filteredRequests.length})</span>
-              </button>
-            </div>
+            {/* CSV出力ボタン */}
+            <button
+              type="button"
+              onClick={() => exportRequestsToCsv(filteredRequests, `業務課依頼一覧_${new Date().toISOString().split('T')[0]}.csv`)}
+              disabled={filteredRequests.length === 0}
+              className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-40 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
+              title="現在の絞り込み結果をCSV形式でダウンロード"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-700" />
+              <span className="hidden sm:inline">CSV</span>
+              <span>({filteredRequests.length})</span>
+            </button>
           </div>
         </div>
 
@@ -813,11 +741,11 @@ export default function DashboardPage(): React.JSX.Element {
           /* 2ペイン（一覧 ＋ 伝票プレビュー横並び）モード */
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* 左側: 依頼一覧リスト */}
-            <div className="lg:col-span-5 space-y-2.5 max-h-[calc(100vh-14rem)] overflow-y-auto pr-1">
+            <div className="lg:col-span-5 space-y-2.5 max-h-[calc(100vh-9.5rem)] overflow-y-auto pr-1">
               <div className="flex items-center justify-between px-2 text-[11px] font-bold text-slate-500 pb-1 border-b border-slate-200">
                 <span>該当依頼: {filteredRequests.length}件</span>
-                <span className="text-sky-600 bg-sky-50 px-2 py-0.5 rounded font-mono">
-                  [ ↑ / ↓ キーで選択切替 ]
+                <span className="text-sky-700 bg-sky-50 px-2 py-0.5 rounded font-mono text-[10px] font-bold">
+                  [ ↑ / ↓ キーで選択 ]
                 </span>
               </div>
 
@@ -836,10 +764,10 @@ export default function DashboardPage(): React.JSX.Element {
                   <div
                     key={req.id}
                     onClick={() => setSelectedSplitIndex(idx)}
-                    className={`p-3.5 rounded-xl border transition-all cursor-pointer text-xs flex flex-col justify-between space-y-2 ${
+                    className={`p-3.5 rounded-xl border transition-all duration-150 cursor-pointer text-xs flex flex-col justify-between space-y-2 relative overflow-hidden ${
                       isSelected
-                        ? 'border-sky-500 bg-sky-50/90 shadow-md ring-2 ring-sky-500/20'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/80 shadow-sm'
+                        ? 'border-sky-400 bg-sky-50/90 shadow-sm ring-1 ring-sky-300/50 border-l-[5px] border-l-sky-600'
+                        : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/80 shadow-2xs'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -867,7 +795,7 @@ export default function DashboardPage(): React.JSX.Element {
                     </div>
 
                     <div>
-                      <p className={`font-bold text-sm line-clamp-1 ${isSelected ? 'text-sky-950' : 'text-slate-900'}`}>
+                      <p className={`font-bold text-sm leading-snug line-clamp-1 ${isSelected ? 'text-sky-950 font-black' : 'text-slate-900'}`}>
                         {req.title}
                       </p>
                     </div>
@@ -875,14 +803,14 @@ export default function DashboardPage(): React.JSX.Element {
                     <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500 font-medium">
                       <div className="flex items-center gap-1.5 truncate max-w-[55%]">
                         <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{req.requesterName}</span>
+                        <span className="truncate font-semibold text-slate-700">{req.requesterName}</span>
                         {req.customerName && (
                           <span className="text-slate-400 truncate">({req.customerName})</span>
                         )}
                       </div>
 
                       <div className="flex items-center gap-1 shrink-0 font-mono">
-                        <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span className={deliveryStyle.style}>{req.desiredDeliveryDate || '-'}</span>
                       </div>
                     </div>
@@ -892,7 +820,7 @@ export default function DashboardPage(): React.JSX.Element {
             </div>
 
             {/* 右側: 選択中の伝票プレビュー (Sticky) */}
-            <div className="lg:col-span-7 sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
+            <div className="lg:col-span-7 sticky top-16 max-h-[calc(100vh-5rem)] overflow-y-auto">
               <VoucherPreview
                 requestItem={filteredRequests[selectedSplitIndex] || null}
                 currentIndex={selectedSplitIndex}
